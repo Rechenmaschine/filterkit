@@ -1,0 +1,123 @@
+//! RBJ "audio EQ cookbook" biquad designers.
+//!
+//! All take a normalised cutoff `f0/fs` (so sample rate cancels out) and
+//! return a [`BiquadCoeffs`] in normalised form. `q` is the standard
+//! "Q-factor" parameter.
+
+use crate::coeffs::BiquadCoeffs;
+
+/// Lowpass biquad spec.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BiquadLowpassSpec {
+    /// Normalised cutoff `f0 / fs`.
+    pub f0: f64,
+    /// Q factor.
+    pub q: f64,
+}
+
+/// Highpass biquad spec.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BiquadHighpassSpec {
+    /// Normalised cutoff `f0 / fs`.
+    pub f0: f64,
+    /// Q factor.
+    pub q: f64,
+}
+
+/// Constant-skirt-gain bandpass biquad spec.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BiquadBandpassSpec {
+    /// Normalised centre `f0 / fs`.
+    pub f0: f64,
+    /// Q factor.
+    pub q: f64,
+}
+
+/// Notch biquad spec.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BiquadNotchSpec {
+    /// Normalised centre `f0 / fs`.
+    pub f0: f64,
+    /// Q factor.
+    pub q: f64,
+}
+
+/// Error type for biquad design.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BiquadDesignError {
+    /// Normalised frequency outside `(0, 0.5)`.
+    InvalidFrequency,
+    /// Q was non-positive.
+    InvalidQ,
+}
+
+fn precompute(f0: f64, q: f64) -> Result<(f64, f64, f64), BiquadDesignError> {
+    if !(f0 > 0.0 && f0 < 0.5) {
+        return Err(BiquadDesignError::InvalidFrequency);
+    }
+    if q <= 0.0 {
+        return Err(BiquadDesignError::InvalidQ);
+    }
+    let w0 = 2.0 * core::f64::consts::PI * f0;
+    let sn = libm::sin(w0);
+    let cs = libm::cos(w0);
+    let alpha = sn / (2.0 * q);
+    Ok((cs, alpha, sn))
+}
+
+impl BiquadLowpassSpec {
+    /// Run the design.
+    pub fn design(&self) -> Result<BiquadCoeffs<f64>, BiquadDesignError> {
+        let (cs, alpha, _) = precompute(self.f0, self.q)?;
+        let b0 = (1.0 - cs) / 2.0;
+        let b1 = 1.0 - cs;
+        let b2 = (1.0 - cs) / 2.0;
+        let a0 = 1.0 + alpha;
+        let a1 = -2.0 * cs;
+        let a2 = 1.0 - alpha;
+        Ok(BiquadCoeffs::from_unnormalised(b0, b1, b2, a0, a1, a2))
+    }
+}
+
+impl BiquadHighpassSpec {
+    /// Run the design.
+    pub fn design(&self) -> Result<BiquadCoeffs<f64>, BiquadDesignError> {
+        let (cs, alpha, _) = precompute(self.f0, self.q)?;
+        let b0 = (1.0 + cs) / 2.0;
+        let b1 = -(1.0 + cs);
+        let b2 = (1.0 + cs) / 2.0;
+        let a0 = 1.0 + alpha;
+        let a1 = -2.0 * cs;
+        let a2 = 1.0 - alpha;
+        Ok(BiquadCoeffs::from_unnormalised(b0, b1, b2, a0, a1, a2))
+    }
+}
+
+impl BiquadBandpassSpec {
+    /// Run the design (constant skirt gain, peak = Q).
+    pub fn design(&self) -> Result<BiquadCoeffs<f64>, BiquadDesignError> {
+        let (cs, alpha, sn) = precompute(self.f0, self.q)?;
+        let _ = sn;
+        let b0 = alpha;
+        let b1 = 0.0;
+        let b2 = -alpha;
+        let a0 = 1.0 + alpha;
+        let a1 = -2.0 * cs;
+        let a2 = 1.0 - alpha;
+        Ok(BiquadCoeffs::from_unnormalised(b0, b1, b2, a0, a1, a2))
+    }
+}
+
+impl BiquadNotchSpec {
+    /// Run the design.
+    pub fn design(&self) -> Result<BiquadCoeffs<f64>, BiquadDesignError> {
+        let (cs, alpha, _) = precompute(self.f0, self.q)?;
+        let b0 = 1.0;
+        let b1 = -2.0 * cs;
+        let b2 = 1.0;
+        let a0 = 1.0 + alpha;
+        let a1 = -2.0 * cs;
+        let a2 = 1.0 - alpha;
+        Ok(BiquadCoeffs::from_unnormalised(b0, b1, b2, a0, a1, a2))
+    }
+}
