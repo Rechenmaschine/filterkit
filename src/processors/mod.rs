@@ -9,6 +9,7 @@ mod delay;
 mod direct_form;
 mod fir;
 mod gain;
+mod one_pole;
 mod sos;
 mod state_space;
 
@@ -17,6 +18,7 @@ pub use delay::Delay;
 pub use direct_form::DirectFormI;
 pub use fir::{Fir, FirState};
 pub use gain::Gain;
+pub use one_pole::OnePole;
 pub use sos::SosCascade;
 pub use state_space::StateSpaceProcessor;
 

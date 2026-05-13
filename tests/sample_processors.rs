@@ -2,7 +2,7 @@
 
 use approx::assert_relative_eq;
 use filterkit::{
-    BiquadCoeffs, Delay, FirCoeffs, Gain, ProcessorExt, Reset, Retune, SampleFilter,
+    BiquadCoeffs, Delay, FirCoeffs, Gain, OnePole, ProcessorExt, Reset, Retune, SampleFilter,
     SampleProcessor,
 };
 use filterkit::processors::{Biquad, Fir};
@@ -133,6 +133,52 @@ fn wet_dry_blends() {
     // wet = 0.25, gain = 4x -> blend = 0.75*x + 0.25*(4*x) = 1.75*x
     let mut wd = Gain::new(4.0_f32).wet_dry(0.25);
     assert_relative_eq!(wd.process_sample(1.0), 1.75, epsilon = 1e-6);
+}
+
+#[test]
+fn one_pole_alpha_one_is_passthrough() {
+    let mut p = OnePole::new(1.0_f32);
+    for x in [0.5, -0.3, 1.2, -2.0] {
+        assert_relative_eq!(p.process_sample(x), x, epsilon = 1e-6);
+    }
+}
+
+#[test]
+fn one_pole_converges_to_dc_input() {
+    // Step response of EMA reaches the input asymptotically.
+    let mut p = OnePole::new(0.1_f32);
+    let mut last = 0.0;
+    for _ in 0..500 {
+        last = p.process_sample(1.0);
+    }
+    assert!((last - 1.0).abs() < 1e-3, "EMA didn't converge: {last}");
+}
+
+#[test]
+fn one_pole_with_state_continues_block() {
+    // First block through a fresh filter, then second block through a
+    // filter warm-started with the prior output — output must equal
+    // running the whole signal through one filter.
+    let signal: [f32; 20] = [
+        0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.4,
+        -0.3, -0.2, -0.1, 0.0,
+    ];
+    let alpha = 0.25_f32;
+    let split = 8;
+
+    let mut full = OnePole::new(alpha);
+    let full_out: Vec<f32> = signal.iter().map(|&x| full.process_sample(x)).collect();
+
+    let mut a = OnePole::new(alpha);
+    let mut last = 0.0;
+    for &x in &signal[..split] {
+        last = a.process_sample(x);
+    }
+    let mut b = OnePole::with_state(alpha, last);
+    for n in split..signal.len() {
+        let y = b.process_sample(signal[n]);
+        assert_relative_eq!(y, full_out[n], max_relative = 1e-6, epsilon = 1e-7);
+    }
 }
 
 #[test]

@@ -7,6 +7,9 @@ use filterkit::processors::Fir;
 use filterkit::SampleProcessor;
 
 fn main() {
+
+    
+
     // 5-tap MA via the design layer.
     let coeffs = MovingAverageSpec
         .design::<f32, 5>()
