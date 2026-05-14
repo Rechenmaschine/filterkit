@@ -218,6 +218,50 @@ fn lowpass_spec_order_zero_rejected() {
 }
 
 #[test]
+fn lowpass_spec_as_one_pole_returns_concrete_type() {
+    // The explicit API ignores `order` and returns OnePole<T> directly
+    // (not the Lowpass<T> enum). The point: a concrete type composes
+    // with combinators that need to know the kernel statically.
+    let p: filterkit::processors::OnePole<f64> = LowpassSpec {
+        cutoff_hz: 100.0,
+        sample_rate: 48_000.0,
+        order: 99, // ignored by as_one_pole
+    }
+    .as_one_pole()
+    .unwrap();
+    let _ = p; // type-check is the test
+}
+
+#[test]
+fn lowpass_spec_as_biquad_returns_concrete_type() {
+    let p: filterkit::processors::Biquad<f64> = LowpassSpec {
+        cutoff_hz: 100.0,
+        sample_rate: 48_000.0,
+        order: 1, // ignored by as_biquad
+    }
+    .as_biquad()
+    .unwrap();
+    let _ = p;
+}
+
+#[test]
+fn lowpass_spec_explicit_kernels_agree_with_auto_dispatch_outputs() {
+    // For a given spec at order=1, .build() (auto) and .as_one_pole()
+    // (explicit) must produce numerically identical outputs.
+    let spec = LowpassSpec { cutoff_hz: 200.0, sample_rate: 48_000.0, order: 1 };
+
+    let mut auto = spec.build::<f64>().unwrap();
+    let mut explicit = spec.as_one_pole::<f64>().unwrap();
+
+    for n in 0..200 {
+        let x = (n as f64 * 0.137).sin();
+        let y_auto = auto.process_sample(x);
+        let y_expl = explicit.process_sample(x);
+        assert_relative_eq!(y_auto, y_expl, max_relative = 1e-12);
+    }
+}
+
+#[test]
 fn lowpass_spec_dispatch_produces_correct_dc_response() {
     // Both kernels are unity-gain at DC. Feed a long DC step, sample
     // the steady-state output; both variants must converge to ~1.0.

@@ -123,6 +123,11 @@ where
 impl LowpassSpec {
     /// Build a lowpass with the library's choice of kernel.
     ///
+    /// The kernel is selected from the [`order`](LowpassSpec::order)
+    /// field. For explicit kernel selection that doesn't go through
+    /// the [`Lowpass`] enum, use [`Self::as_one_pole`] or
+    /// [`Self::as_biquad`].
+    ///
     /// `T` is the runtime sample type; the design math runs in `f64`
     /// then converts via [`num_traits::FromPrimitive`].
     pub fn build<T>(&self) -> Result<Lowpass<T>, LowpassBuildError>
@@ -137,36 +142,59 @@ impl LowpassSpec {
     {
         match self.order {
             0 => Err(LowpassBuildError::UnsupportedOrder { requested: 0 }),
-
-            // 1st-order → OnePole via the EMA design (impulse-invariant
-            // mapping `α = 1 - exp(-2π f_c / fs)`).
-            1 => {
-                let ema = ExponentialAverageSpec::from_cutoff_hz(self.cutoff_hz, self.sample_rate)?;
-                let alpha: T = ema.design().map_err(LowpassBuildError::from)?;
-                Ok(Lowpass::OnePole(OnePole::new(alpha)))
-            }
-
-            // 2nd-order → Biquad via the RBJ cookbook (Butterworth Q).
-            2 => {
-                let spec = BiquadLowpassSpec {
-                    f0: self.cutoff_hz / self.sample_rate,
-                    q: core::f64::consts::FRAC_1_SQRT_2,
-                };
-                let c64 = spec.design()?;
-                let coeffs = crate::coeffs::BiquadCoeffs::new(
-                    T::from_f64(c64.b0).ok_or(LowpassBuildError::NumericConversion)?,
-                    T::from_f64(c64.b1).ok_or(LowpassBuildError::NumericConversion)?,
-                    T::from_f64(c64.b2).ok_or(LowpassBuildError::NumericConversion)?,
-                    T::from_f64(c64.a1).ok_or(LowpassBuildError::NumericConversion)?,
-                    T::from_f64(c64.a2).ok_or(LowpassBuildError::NumericConversion)?,
-                );
-                Ok(Lowpass::Biquad(Biquad::new(coeffs)))
-            }
-
-            // Higher orders deliberately stubbed in the prototype; they
-            // belong on `Lowpass::Sos(SosDyn<T>)` once Butterworth/
+            1 => self.as_one_pole().map(Lowpass::OnePole),
+            2 => self.as_biquad().map(Lowpass::Biquad),
+            // Higher orders deliberately stubbed in the prototype;
+            // reserved for `Lowpass::Sos(SosDyn<T>)` once Butterworth/
             // Chebyshev SOS design lands.
             n => Err(LowpassBuildError::UnsupportedOrder { requested: n }),
         }
+    }
+
+    /// Materialise this spec as a [`OnePole`] regardless of the
+    /// [`order`](LowpassSpec::order) field.
+    ///
+    /// Returns a concrete type — no enum dispatch, fully composable
+    /// with combinators like [`crate::combinators::Chain`].
+    ///
+    /// Uses the impulse-invariant mapping
+    /// `α = 1 - exp(-2π f_c / fs)`.
+    pub fn as_one_pole<T>(&self) -> Result<OnePole<T>, LowpassBuildError>
+    where
+        T: Copy
+            + num_traits::Zero
+            + num_traits::FromPrimitive,
+    {
+        let ema = ExponentialAverageSpec::from_cutoff_hz(self.cutoff_hz, self.sample_rate)?;
+        let alpha: T = ema.design().map_err(LowpassBuildError::from)?;
+        Ok(OnePole::new(alpha))
+    }
+
+    /// Materialise this spec as a [`Biquad`] regardless of the
+    /// [`order`](LowpassSpec::order) field.
+    ///
+    /// Uses the RBJ cookbook formula with Butterworth `Q = 1/√2`.
+    pub fn as_biquad<T>(&self) -> Result<Biquad<T>, LowpassBuildError>
+    where
+        T: Copy
+            + num_traits::Zero
+            + num_traits::FromPrimitive
+            + core::ops::Add<Output = T>
+            + core::ops::Sub<Output = T>
+            + core::ops::Mul<Output = T>,
+    {
+        let spec = BiquadLowpassSpec {
+            f0: self.cutoff_hz / self.sample_rate,
+            q: core::f64::consts::FRAC_1_SQRT_2,
+        };
+        let c64 = spec.design()?;
+        let coeffs = crate::coeffs::BiquadCoeffs::new(
+            T::from_f64(c64.b0).ok_or(LowpassBuildError::NumericConversion)?,
+            T::from_f64(c64.b1).ok_or(LowpassBuildError::NumericConversion)?,
+            T::from_f64(c64.b2).ok_or(LowpassBuildError::NumericConversion)?,
+            T::from_f64(c64.a1).ok_or(LowpassBuildError::NumericConversion)?,
+            T::from_f64(c64.a2).ok_or(LowpassBuildError::NumericConversion)?,
+        );
+        Ok(Biquad::new(coeffs))
     }
 }
