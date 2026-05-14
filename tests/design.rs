@@ -5,8 +5,8 @@
 use approx::assert_relative_eq;
 use filterkit::design::{
     BiquadBandpassSpec, BiquadHighpassSpec, BiquadLowpassSpec, BiquadNotchSpec,
-    ExponentialAverageError, ExponentialAverageSpec, MovingAverageSpec, Window,
-    WindowedSincLowpassSpec,
+    ExponentialAverageError, ExponentialAverageSpec, Lowpass, LowpassBuildError, LowpassSpec,
+    MovingAverageSpec, Window, WindowedSincLowpassSpec,
 };
 use filterkit::processors::{Biquad, Fir, OnePole};
 use filterkit::SampleProcessor;
@@ -165,4 +165,74 @@ fn ema_from_cutoff_hz_gives_3db_attenuation_at_cutoff() {
 fn ema_rejects_cutoff_above_nyquist() {
     assert!(ExponentialAverageSpec::from_cutoff_hz(25_000.0, 48_000.0).is_err());
     assert!(ExponentialAverageSpec::from_cutoff_hz(-100.0, 48_000.0).is_err());
+}
+
+#[test]
+fn lowpass_spec_order_1_dispatches_to_one_pole() {
+    let lp: Lowpass<f64> = LowpassSpec {
+        cutoff_hz: 100.0,
+        sample_rate: 48_000.0,
+        order: 1,
+    }
+    .build()
+    .unwrap();
+    assert!(matches!(lp, Lowpass::OnePole(_)));
+}
+
+#[test]
+fn lowpass_spec_order_2_dispatches_to_biquad() {
+    let lp: Lowpass<f64> = LowpassSpec {
+        cutoff_hz: 100.0,
+        sample_rate: 48_000.0,
+        order: 2,
+    }
+    .build()
+    .unwrap();
+    assert!(matches!(lp, Lowpass::Biquad(_)));
+}
+
+#[test]
+fn lowpass_spec_higher_orders_unsupported_in_prototype() {
+    let err = LowpassSpec {
+        cutoff_hz: 100.0,
+        sample_rate: 48_000.0,
+        order: 4,
+    }
+    .build::<f64>()
+    .unwrap_err();
+    assert!(matches!(
+        err,
+        LowpassBuildError::UnsupportedOrder { requested: 4 }
+    ));
+}
+
+#[test]
+fn lowpass_spec_order_zero_rejected() {
+    assert!(LowpassSpec {
+        cutoff_hz: 100.0,
+        sample_rate: 48_000.0,
+        order: 0,
+    }
+    .build::<f64>()
+    .is_err());
+}
+
+#[test]
+fn lowpass_spec_dispatch_produces_correct_dc_response() {
+    // Both kernels are unity-gain at DC. Feed a long DC step, sample
+    // the steady-state output; both variants must converge to ~1.0.
+    for order in [1usize, 2] {
+        let mut lp: Lowpass<f64> = LowpassSpec {
+            cutoff_hz: 50.0,
+            sample_rate: 48_000.0,
+            order,
+        }
+        .build()
+        .unwrap();
+        let mut y = 0.0;
+        for _ in 0..8_000 {
+            y = lp.process_sample(1.0);
+        }
+        assert!((y - 1.0).abs() < 1e-3, "order {order} DC = {y}");
+    }
 }

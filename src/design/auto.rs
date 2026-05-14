@@ -1,0 +1,172 @@
+//! **Prototype**: high-level filter specs that pick a kernel for you.
+//!
+//! Where the rest of [`crate::design`] takes a spec and hands back
+//! *coefficients* (forcing the user to choose between `OnePole`,
+//! `Biquad`, `SosCascade`, …), the specs in this module return a
+//! ready-built processor wrapped in a kernel-erased enum like
+//! [`Lowpass`].
+//!
+//! The library is then free to pick the cheapest kernel that satisfies
+//! the request — e.g. a 1st-order lowpass becomes [`OnePole`] (one
+//! state word, 2 muls), a 2nd-order lowpass becomes [`Biquad`]
+//! (DF2T, two state words). The user writes the same code in both
+//! cases.
+//!
+//! ## Trade-off
+//!
+//! The enum is sized by its largest variant, and `process_sample`
+//! dispatches through a `match`. In practice the branch predictor
+//! sees the same variant on every call, so the cost is at most a
+//! correctly-predicted conditional branch — not zero, but very close.
+//! When you need *guaranteed* zero overhead, drop down to the
+//! kernel-specific specs ([`super::BiquadLowpassSpec`],
+//! [`super::ExponentialAverageSpec`], …) and own the dispatch yourself.
+//!
+//! ## Status
+//!
+//! This is a prototype. Only [`Lowpass`] / [`LowpassSpec`] are
+//! implemented; higher-order (≥ 3) routes through cascaded biquads
+//! are stubbed (see [`LowpassBuildError::UnsupportedOrder`]).
+
+use crate::design::{BiquadDesignError, BiquadLowpassSpec, ExponentialAverageError, ExponentialAverageSpec};
+use crate::processors::{Biquad, OnePole};
+use crate::traits::{Reset, SampleProcessor};
+
+/// High-level lowpass request.
+///
+/// Specify cutoff, sample rate, and filter order; the library picks
+/// the kernel. `order = 1` runs cheaper than `order = 2`, which runs
+/// cheaper than higher-order cascades.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LowpassSpec {
+    /// `-3 dB` cutoff in Hertz.
+    pub cutoff_hz: f64,
+    /// Sample rate in Hertz.
+    pub sample_rate: f64,
+    /// Filter order. `1` ⇒ one-pole; `2` ⇒ biquad.
+    pub order: usize,
+}
+
+/// Error from [`LowpassSpec::build`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LowpassBuildError {
+    /// `order = 0` or higher than the prototype supports.
+    UnsupportedOrder { requested: usize },
+    /// Upstream EMA designer rejected the parameters.
+    ExponentialAverage(ExponentialAverageError),
+    /// Upstream biquad designer rejected the parameters.
+    Biquad(BiquadDesignError),
+    /// The numeric type couldn't represent the designed coefficient
+    /// (NaN, overflow on fixed-point, …).
+    NumericConversion,
+}
+
+impl From<ExponentialAverageError> for LowpassBuildError {
+    fn from(e: ExponentialAverageError) -> Self {
+        Self::ExponentialAverage(e)
+    }
+}
+
+impl From<BiquadDesignError> for LowpassBuildError {
+    fn from(e: BiquadDesignError) -> Self {
+        Self::Biquad(e)
+    }
+}
+
+/// Kernel-erased lowpass processor.
+///
+/// Constructed by [`LowpassSpec::build`]. Internally one of:
+/// - [`OnePole`] for `order = 1`
+/// - [`Biquad`] for `order = 2`
+///
+/// Implements [`SampleProcessor`] and [`Reset`] uniformly; the `match`
+/// dispatch happens inside `process_sample`.
+#[derive(Clone, Copy, Debug)]
+pub enum Lowpass<T> {
+    /// 1st-order kernel.
+    OnePole(OnePole<T>),
+    /// 2nd-order kernel.
+    Biquad(Biquad<T>),
+}
+
+impl<T> Reset for Lowpass<T>
+where
+    T: num_traits::Zero + Copy,
+{
+    fn reset(&mut self) {
+        match self {
+            Lowpass::OnePole(p) => p.reset(),
+            Lowpass::Biquad(p) => p.reset(),
+        }
+    }
+}
+
+impl<T> SampleProcessor<T> for Lowpass<T>
+where
+    T: Copy
+        + num_traits::Zero
+        + num_traits::One
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>
+        + core::ops::Mul<Output = T>,
+{
+    type Output = T;
+
+    fn process_sample(&mut self, input: T) -> Self::Output {
+        match self {
+            Lowpass::OnePole(p) => p.process_sample(input),
+            Lowpass::Biquad(p) => p.process_sample(input),
+        }
+    }
+}
+
+impl LowpassSpec {
+    /// Build a lowpass with the library's choice of kernel.
+    ///
+    /// `T` is the runtime sample type; the design math runs in `f64`
+    /// then converts via [`num_traits::FromPrimitive`].
+    pub fn build<T>(&self) -> Result<Lowpass<T>, LowpassBuildError>
+    where
+        T: Copy
+            + num_traits::Zero
+            + num_traits::One
+            + num_traits::FromPrimitive
+            + core::ops::Add<Output = T>
+            + core::ops::Sub<Output = T>
+            + core::ops::Mul<Output = T>,
+    {
+        match self.order {
+            0 => Err(LowpassBuildError::UnsupportedOrder { requested: 0 }),
+
+            // 1st-order → OnePole via the EMA design (impulse-invariant
+            // mapping `α = 1 - exp(-2π f_c / fs)`).
+            1 => {
+                let ema = ExponentialAverageSpec::from_cutoff_hz(self.cutoff_hz, self.sample_rate)?;
+                let alpha: T = ema.design().map_err(LowpassBuildError::from)?;
+                Ok(Lowpass::OnePole(OnePole::new(alpha)))
+            }
+
+            // 2nd-order → Biquad via the RBJ cookbook (Butterworth Q).
+            2 => {
+                let spec = BiquadLowpassSpec {
+                    f0: self.cutoff_hz / self.sample_rate,
+                    q: core::f64::consts::FRAC_1_SQRT_2,
+                };
+                let c64 = spec.design()?;
+                let coeffs = crate::coeffs::BiquadCoeffs::new(
+                    T::from_f64(c64.b0).ok_or(LowpassBuildError::NumericConversion)?,
+                    T::from_f64(c64.b1).ok_or(LowpassBuildError::NumericConversion)?,
+                    T::from_f64(c64.b2).ok_or(LowpassBuildError::NumericConversion)?,
+                    T::from_f64(c64.a1).ok_or(LowpassBuildError::NumericConversion)?,
+                    T::from_f64(c64.a2).ok_or(LowpassBuildError::NumericConversion)?,
+                );
+                Ok(Lowpass::Biquad(Biquad::new(coeffs)))
+            }
+
+            // Higher orders deliberately stubbed in the prototype; they
+            // belong on `Lowpass::Sos(SosDyn<T>)` once Butterworth/
+            // Chebyshev SOS design lands.
+            n => Err(LowpassBuildError::UnsupportedOrder { requested: n }),
+        }
+    }
+}
