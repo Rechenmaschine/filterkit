@@ -97,5 +97,56 @@ fn bench_sos_n(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_biquad, bench_fir_32, bench_sos_n);
+fn bench_dispatch_strategies(c: &mut Criterion) {
+    use filterkit::design::{Lowpass, LowpassSpec};
+
+    let input: Vec<f64> = (0..BLOCK)
+        .map(|i| (i as f64 * 0.137).sin() + 0.5 * (i as f64 * 0.41).cos())
+        .collect();
+    let mut output = vec![0.0_f64; BLOCK];
+
+    let spec = LowpassSpec { cutoff_hz: 200.0, sample_rate: 48_000.0, order: 2 };
+
+    let mut g = c.benchmark_group("lowpass_dispatch");
+    g.throughput(Throughput::Elements(BLOCK as u64));
+
+    // 1. Concrete kernel (as_biquad). Zero-cost dispatch baseline.
+    g.bench_function("as_biquad concrete", |b| {
+        let mut bq = spec.as_biquad::<f64>().unwrap();
+        b.iter(|| {
+            bq.process_into(black_box(&input), &mut output);
+            black_box(&output[0]);
+        });
+    });
+
+    // 2. Enum dispatch via build() -> Lowpass<T>. One match per sample.
+    g.bench_function("Lowpass enum", |b| {
+        let mut lp: Lowpass<f64> = spec.build().unwrap();
+        b.iter(|| {
+            for (x, y) in input.iter().zip(output.iter_mut()) {
+                *y = lp.process_sample(*x);
+            }
+            black_box(&output[0]);
+        });
+    });
+
+    // 3. Boxed trait object. One vtable lookup per sample.
+    g.bench_function("Box<dyn> trait object", |b| {
+        let mut bx = spec.build_boxed::<f64>().unwrap();
+        b.iter(|| {
+            for (x, y) in input.iter().zip(output.iter_mut()) {
+                *y = bx.process_sample(*x);
+            }
+            black_box(&output[0]);
+        });
+    });
+}
+
+criterion_group!(
+    benches,
+    bench_biquad,
+    bench_fir_32,
+    bench_sos_n,
+    bench_dispatch_strategies,
+);
 criterion_main!(benches);
