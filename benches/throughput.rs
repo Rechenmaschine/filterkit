@@ -119,13 +119,26 @@ fn bench_dispatch_strategies(c: &mut Criterion) {
         });
     });
 
-    // 2. Enum dispatch via build() -> Lowpass<T>. One match per sample.
-    g.bench_function("Lowpass enum", |b| {
+    // 2a. Enum dispatch via build() -> Lowpass<T>.
+    //     User-written hot loop — match runs INSIDE per sample.
+    g.bench_function("Lowpass enum, match-per-sample loop", |b| {
         let mut lp: Lowpass<f64> = spec.build().unwrap();
         b.iter(|| {
             for (x, y) in input.iter().zip(output.iter_mut()) {
                 *y = lp.process_sample(*x);
             }
+            black_box(&output[0]);
+        });
+    });
+
+    // 2b. Enum dispatch via build() -> Lowpass<T>.
+    //     Same enum, but uses the overridden process_into that hoists
+    //     the match OUT of the loop. This is the path the library
+    //     wants you to use for block processing.
+    g.bench_function("Lowpass enum, process_into (match hoisted)", |b| {
+        let mut lp: Lowpass<f64> = spec.build().unwrap();
+        b.iter(|| {
+            lp.process_into(black_box(&input), &mut output);
             black_box(&output[0]);
         });
     });

@@ -118,6 +118,31 @@ where
             Lowpass::Biquad(p) => p.process_sample(input),
         }
     }
+
+    /// Overridden to hoist the variant `match` *out* of the per-sample
+    /// loop.
+    ///
+    /// The default impl from [`SampleProcessor`] would call our
+    /// `process_sample` once per sample, which matches each time and
+    /// blocks LLVM from optimising across iterations. Here we match
+    /// once and run the concrete kernel's own `process_into` over the
+    /// whole block — getting (in benchmarks) ≈ concrete-kernel speed
+    /// without giving up the enum-erased return type from
+    /// [`LowpassSpec::build`].
+    ///
+    /// Same idea as match-on-the-outside-of-the-hot-loop in any
+    /// hand-written variable-kernel DSP code.
+    fn process_into(&mut self, input: &[T], output: &mut [T]) {
+        assert_eq!(
+            input.len(),
+            output.len(),
+            "process_into: input and output must have equal length",
+        );
+        match self {
+            Lowpass::OnePole(p) => p.process_into(input, output),
+            Lowpass::Biquad(p) => p.process_into(input, output),
+        }
+    }
 }
 
 impl LowpassSpec {
