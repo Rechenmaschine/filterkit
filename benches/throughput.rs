@@ -143,6 +143,17 @@ fn bench_dispatch_strategies(c: &mut Criterion) {
         });
     });
 
+    // 2c. In-place version through the overridden process_in_place.
+    //     The SampleFilter blanket impl is gone; concrete kernels
+    //     and enums can now override process_in_place for free.
+    g.bench_function("Lowpass enum, process_in_place (match hoisted)", |b| {
+        let mut lp: Lowpass<f64> = spec.build().unwrap();
+        let mut buf = input.clone();
+        b.iter(|| {
+            lp.process_in_place(black_box(&mut buf));
+            black_box(&buf[0]);
+        });
+    });
 }
 
 criterion_group!(

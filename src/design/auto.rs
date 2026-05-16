@@ -155,6 +155,19 @@ where
             Lowpass::Biquad(p) => p.process_into(input, output),
         }
     }
+
+    /// Same hoisting trick as [`Self::process_into`], for the in-place
+    /// path. Each arm runs its kernel's own `process_in_place`, so
+    /// any per-kernel optimisations propagate.
+    fn process_in_place(&mut self, buffer: &mut [T])
+    where
+        T: Copy,
+    {
+        match self {
+            Lowpass::OnePole(p) => p.process_in_place(buffer),
+            Lowpass::Biquad(p) => p.process_in_place(buffer),
+        }
+    }
 }
 
 impl LowpassSpec {
