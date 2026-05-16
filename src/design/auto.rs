@@ -48,7 +48,12 @@ pub struct LowpassSpec {
 }
 
 /// Error from [`LowpassSpec::build`].
+///
+/// Marked `#[non_exhaustive]` because we expect to add variants for
+/// higher-order designers (Butterworth/Chebyshev/Elliptic) without
+/// breaking downstream code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum LowpassBuildError {
     /// `order = 0` or higher than the prototype supports.
     UnsupportedOrder { requested: usize },
@@ -80,8 +85,15 @@ impl From<BiquadDesignError> for LowpassBuildError {
 /// - [`Biquad`] for `order = 2`
 ///
 /// Implements [`SampleProcessor`] and [`Reset`] uniformly; the `match`
-/// dispatch happens inside `process_sample`.
+/// dispatch happens once per block in `process_into` (see the override
+/// below), not per sample.
+///
+/// Marked `#[non_exhaustive]` so additional kernels (e.g. an SOS
+/// cascade for higher orders, or a boxcar variant for moving-average
+/// shaped lowpasses) can be added without breaking downstream code.
+/// Downstream `match`es must include a wildcard `_ =>` arm.
 #[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
 pub enum Lowpass<T> {
     /// 1st-order kernel.
     OnePole(OnePole<T>),
@@ -223,45 +235,4 @@ impl LowpassSpec {
         Ok(Biquad::new(coeffs))
     }
 
-    /// **Prototype**: same dispatch as [`build`](Self::build), but the
-    /// kernel is returned as a heap-allocated trait object.
-    ///
-    /// Compared to [`build`](Self::build) returning [`Lowpass<T>`]:
-    ///
-    /// | Trait object | Enum |
-    /// |---|---|
-    /// | Heap allocation per filter | Stack only |
-    /// | Dynamic dispatch (vtable lookup) per `process_sample` | `match` (branch-predicted) |
-    /// | Kernel set extensible by downstream crates | Closed (enum variants only) |
-    /// | Does **not** compose with [`ProcessorExt`] (`!Sized`) | Composes freely |
-    /// | Hides the concrete kernel from callers | Callers can pattern-match |
-    ///
-    /// In benchmarks the vtable cost is typically 1–3 ns/sample on
-    /// modern x86_64 — small for one filter, accumulates for thousands.
-    /// Use this when you genuinely need open kernel extensibility
-    /// (e.g. user-pluggable filter kernels); prefer [`build`](Self::build)
-    /// otherwise.
-    ///
-    /// [`ProcessorExt`]: crate::traits::ProcessorExt
-    #[cfg(feature = "alloc")]
-    pub fn build_boxed<T>(
-        &self,
-    ) -> Result<alloc::boxed::Box<dyn crate::traits::SampleProcessor<T, Output = T>>, LowpassBuildError>
-    where
-        T: 'static
-            + Copy
-            + num_traits::Zero
-            + num_traits::One
-            + num_traits::FromPrimitive
-            + core::ops::Add<Output = T>
-            + core::ops::Sub<Output = T>
-            + core::ops::Mul<Output = T>,
-    {
-        match self.order {
-            0 => Err(LowpassBuildError::UnsupportedOrder { requested: 0 }),
-            1 => Ok(alloc::boxed::Box::new(self.as_one_pole::<T>()?)),
-            2 => Ok(alloc::boxed::Box::new(self.as_biquad::<T>()?)),
-            n => Err(LowpassBuildError::UnsupportedOrder { requested: n }),
-        }
-    }
 }

@@ -3,18 +3,14 @@
 //! Run with: `cargo run --example fir_moving_average`
 
 use filterkit::design::MovingAverageSpec;
-use filterkit::processors::Fir;
-use filterkit::SampleProcessor;
+use filterkit::{SampleFilter, SampleProcessor};
 
 fn main() {
-
-    
-
-    // 5-tap MA via the design layer.
-    let coeffs = MovingAverageSpec
-        .design::<f32, 5>()
-        .expect("moving average design");
-    let mut fir = Fir::new(coeffs);
+    // 5-tap MA via the design layer. `.build()` hands back a
+    // ready-to-run Fir<f32, 5> — no separate `Fir::new(coeffs)` step.
+    let mut fir = MovingAverageSpec
+        .build::<f32, 5>()
+        .expect("moving average build");
 
     // Noisy ramp signal.
     let mut rng_state: u32 = 0xDEAD_BEEF;
@@ -27,11 +23,21 @@ fn main() {
         })
         .collect();
 
+    // Out-of-place: read xs, write ys.
     let mut ys = vec![0.0; xs.len()];
     fir.process_into(&xs, &mut ys);
 
-    println!("# n  noisy  smoothed");
-    for (i, (x, y)) in xs.iter().zip(ys.iter()).enumerate() {
-        println!("{i:3}  {x:+.4}  {y:+.4}");
+    // In-place: SampleFilter is blanket-implemented for any
+    // SampleProcessor whose input and output share a type, so
+    // .process_in_place is available for free.
+    let mut fir2 = MovingAverageSpec
+        .build::<f32, 5>()
+        .expect("moving average build");
+    let mut buffer = xs.clone();
+    fir2.process_in_place(&mut buffer);
+
+    println!("# n   noisy   process_into   process_in_place");
+    for (i, ((x, y), z)) in xs.iter().zip(ys.iter()).zip(buffer.iter()).enumerate() {
+        println!("{i:3}   {x:+.4}        {y:+.4}            {z:+.4}");
     }
 }

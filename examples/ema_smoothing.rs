@@ -4,7 +4,6 @@
 //! Run with: `cargo run --example ema_smoothing`
 
 use filterkit::design::ExponentialAverageSpec;
-use filterkit::processors::OnePole;
 use filterkit::SampleProcessor;
 
 fn main() {
@@ -20,9 +19,11 @@ fn main() {
     println!("alpha (tau = 20 ms)   = {:.4}", a_tau.alpha());
     println!("alpha (fc = 8 Hz)     = {:.4}", a_fc.alpha());
 
-    let mut p_alpha = OnePole::new(a_alpha.design::<f64>().unwrap());
-    let mut p_tau = OnePole::new(a_tau.design::<f64>().unwrap());
-    let mut p_fc = OnePole::new(a_fc.design::<f64>().unwrap());
+    // `build()` returns a ready-to-run OnePole<T> directly. Use
+    // `design()` instead if you want just the α as a coefficient.
+    let mut p_alpha = a_alpha.build::<f64>().unwrap();
+    let mut p_tau = a_tau.build::<f64>().unwrap();
+    let mut p_fc = a_fc.build::<f64>().unwrap();
 
     // Noisy ramp.
     let mut rng_state: u32 = 0xC0FF_EE00;

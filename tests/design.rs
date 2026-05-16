@@ -245,41 +245,6 @@ fn lowpass_spec_as_biquad_returns_concrete_type() {
 }
 
 #[test]
-fn lowpass_spec_build_boxed_matches_enum_dispatch() {
-    // Both build() and build_boxed() should produce identical sample
-    // streams. They share the underlying as_one_pole / as_biquad math.
-    use filterkit::traits::SampleProcessor;
-    let spec = LowpassSpec { cutoff_hz: 200.0, sample_rate: 48_000.0, order: 2 };
-
-    let mut enum_lp = spec.build::<f64>().unwrap();
-    let mut boxed_lp = spec.build_boxed::<f64>().unwrap();
-
-    for n in 0..200 {
-        let x = (n as f64 * 0.137).sin();
-        let y_enum = enum_lp.process_sample(x);
-        let y_boxed = boxed_lp.process_sample(x);
-        assert_relative_eq!(y_enum, y_boxed, max_relative = 1e-12);
-    }
-}
-
-#[test]
-fn lowpass_spec_build_boxed_heterogeneous_collection() {
-    // The point of the boxed API: collect different kernel kinds
-    // behind a single uniform type.
-    use filterkit::traits::SampleProcessor;
-    let s1 = LowpassSpec { cutoff_hz: 100.0, sample_rate: 48_000.0, order: 1 };
-    let s2 = LowpassSpec { cutoff_hz: 100.0, sample_rate: 48_000.0, order: 2 };
-
-    let mut filters: Vec<Box<dyn SampleProcessor<f64, Output = f64>>> =
-        vec![s1.build_boxed().unwrap(), s2.build_boxed().unwrap()];
-
-    for f in filters.iter_mut() {
-        let y = f.process_sample(1.0);
-        assert!(y.is_finite());
-    }
-}
-
-#[test]
 fn lowpass_spec_explicit_kernels_agree_with_auto_dispatch_outputs() {
     // For a given spec at order=1, .build() (auto) and .as_one_pole()
     // (explicit) must produce numerically identical outputs.

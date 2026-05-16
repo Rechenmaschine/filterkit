@@ -3,8 +3,15 @@
 //! All take a normalised cutoff `f0/fs` (so sample rate cancels out) and
 //! return a [`BiquadCoeffs`] in normalised form. `q` is the standard
 //! "Q-factor" parameter.
+//!
+//! Each spec exposes two materialisers:
+//! - `design()` — returns [`BiquadCoeffs<f64>`] for reuse / inspection.
+//! - `build::<T>()` — returns a ready-to-run [`Biquad<T>`] processor
+//!   with zero initial state. Equivalent to
+//!   `Biquad::new(spec.design()? converted to T)`.
 
 use crate::coeffs::BiquadCoeffs;
+use crate::processors::Biquad;
 
 /// Lowpass biquad spec.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -119,5 +126,72 @@ impl BiquadNotchSpec {
         let a1 = -2.0 * cs;
         let a2 = 1.0 - alpha;
         Ok(BiquadCoeffs::from_unnormalised(b0, b1, b2, a0, a1, a2))
+    }
+}
+
+/// Helper: convert an `f64` biquad coefficient set to a generic `T`.
+fn coeffs_to<T>(c: BiquadCoeffs<f64>) -> Result<BiquadCoeffs<T>, BiquadDesignError>
+where
+    T: num_traits::FromPrimitive,
+{
+    Ok(BiquadCoeffs::new(
+        T::from_f64(c.b0).ok_or(BiquadDesignError::InvalidFrequency)?,
+        T::from_f64(c.b1).ok_or(BiquadDesignError::InvalidFrequency)?,
+        T::from_f64(c.b2).ok_or(BiquadDesignError::InvalidFrequency)?,
+        T::from_f64(c.a1).ok_or(BiquadDesignError::InvalidFrequency)?,
+        T::from_f64(c.a2).ok_or(BiquadDesignError::InvalidFrequency)?,
+    ))
+}
+
+/// Numeric bounds for materialising a biquad against a generic `T`.
+///
+/// Blanket-implemented for any type that is `Copy`, has additive and
+/// multiplicative ring structure, a zero, and supports
+/// [`num_traits::FromPrimitive`] (needed to cast the `f64` design
+/// output into `T`).
+pub trait BiquadScalar:
+    Copy
+    + num_traits::Zero
+    + num_traits::FromPrimitive
+    + core::ops::Add<Output = Self>
+    + core::ops::Sub<Output = Self>
+    + core::ops::Mul<Output = Self>
+{
+}
+impl<T> BiquadScalar for T where
+    T: Copy
+        + num_traits::Zero
+        + num_traits::FromPrimitive
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>
+        + core::ops::Mul<Output = T>
+{
+}
+
+impl BiquadLowpassSpec {
+    /// One-step path: design and wrap in a [`Biquad`].
+    pub fn build<T: BiquadScalar>(&self) -> Result<Biquad<T>, BiquadDesignError> {
+        Ok(Biquad::new(coeffs_to::<T>(self.design()?)?))
+    }
+}
+
+impl BiquadHighpassSpec {
+    /// One-step path: design and wrap in a [`Biquad`].
+    pub fn build<T: BiquadScalar>(&self) -> Result<Biquad<T>, BiquadDesignError> {
+        Ok(Biquad::new(coeffs_to::<T>(self.design()?)?))
+    }
+}
+
+impl BiquadBandpassSpec {
+    /// One-step path: design and wrap in a [`Biquad`].
+    pub fn build<T: BiquadScalar>(&self) -> Result<Biquad<T>, BiquadDesignError> {
+        Ok(Biquad::new(coeffs_to::<T>(self.design()?)?))
+    }
+}
+
+impl BiquadNotchSpec {
+    /// One-step path: design and wrap in a [`Biquad`].
+    pub fn build<T: BiquadScalar>(&self) -> Result<Biquad<T>, BiquadDesignError> {
+        Ok(Biquad::new(coeffs_to::<T>(self.design()?)?))
     }
 }

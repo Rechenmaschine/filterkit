@@ -80,6 +80,10 @@ impl ExponentialAverageSpec {
 
     /// Materialise to an `α` of the target numeric type.
     ///
+    /// This is the **coefficient-only** path — useful if you want to
+    /// share the same α across several filters or store it for later.
+    /// If you just want a ready-to-run filter, prefer [`Self::build`].
+    ///
     /// Returns [`ExponentialAverageError::InvalidParameter`] if `T`
     /// cannot represent the underlying `f64` (e.g. NaN, overflow on
     /// fixed-point types).
@@ -88,5 +92,18 @@ impl ExponentialAverageSpec {
         T: num_traits::FromPrimitive,
     {
         T::from_f64(self.alpha).ok_or(ExponentialAverageError::InvalidParameter)
+    }
+
+    /// One-step path: materialise this spec straight into a
+    /// [`OnePole`] processor with zero initial state.
+    ///
+    /// Equivalent to `OnePole::new(spec.design()?)`, just shorter.
+    ///
+    /// [`OnePole`]: crate::processors::OnePole
+    pub fn build<T>(&self) -> Result<crate::processors::OnePole<T>, ExponentialAverageError>
+    where
+        T: Copy + num_traits::Zero + num_traits::FromPrimitive,
+    {
+        Ok(crate::processors::OnePole::new(self.design::<T>()?))
     }
 }

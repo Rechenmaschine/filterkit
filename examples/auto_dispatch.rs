@@ -53,6 +53,8 @@ fn kernel_name<T>(lp: &Lowpass<T>) -> &'static str {
     match lp {
         Lowpass::OnePole(_) => "OnePole",
         Lowpass::Biquad(_) => "Biquad",
+        // Lowpass is #[non_exhaustive] — future variants land here.
+        _ => "other",
     }
 }
 

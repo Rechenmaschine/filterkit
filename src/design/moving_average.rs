@@ -17,7 +17,9 @@ impl MovingAverageSpec {
     /// Design an `N`-tap moving average FIR with uniform weights `1/N`.
     ///
     /// `N` is supplied via turbofish (`spec.design::<f32, 16>()`); the
-    /// compile-time size keeps the result no-alloc and `Copy`.
+    /// compile-time size keeps the result no-alloc and `Copy`. Returns
+    /// just the coefficients — use [`Self::build`] if you want a
+    /// ready-to-run [`Fir`](crate::processors::Fir).
     pub fn design<T, const N: usize>(self) -> Result<FirCoeffs<T, N>, MovingAverageError>
     where
         T: Copy + num_traits::One + num_traits::FromPrimitive + core::ops::Div<Output = T>,
@@ -28,5 +30,17 @@ impl MovingAverageSpec {
         let n_t = T::from_usize(N).ok_or(MovingAverageError::NumericConversion)?;
         let coeff = T::one() / n_t;
         Ok(FirCoeffs::new([coeff; N]))
+    }
+
+    /// One-step path: design and wrap in a [`Fir`](crate::processors::Fir).
+    pub fn build<T, const N: usize>(self) -> Result<crate::processors::Fir<T, N>, MovingAverageError>
+    where
+        T: Copy
+            + Default
+            + num_traits::One
+            + num_traits::FromPrimitive
+            + core::ops::Div<Output = T>,
+    {
+        Ok(crate::processors::Fir::new(self.design::<T, N>()?))
     }
 }

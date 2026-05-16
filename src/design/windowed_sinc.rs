@@ -36,6 +36,11 @@ pub enum WindowedSincError {
 }
 
 impl WindowedSincLowpassSpec {
+    /// One-step path: design and wrap in a [`Fir`](crate::processors::Fir).
+    pub fn build<const N: usize>(&self) -> Result<crate::processors::Fir<f64, N>, WindowedSincError> {
+        Ok(crate::processors::Fir::new(self.design::<N>()?))
+    }
+
     /// Design an `N`-tap lowpass FIR with the configured cutoff and
     /// window. Returns coefficients normalised so DC gain is 1.
     pub fn design<const N: usize>(&self) -> Result<FirCoeffs<f64, N>, WindowedSincError> {

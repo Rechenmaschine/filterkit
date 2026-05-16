@@ -143,16 +143,6 @@ fn bench_dispatch_strategies(c: &mut Criterion) {
         });
     });
 
-    // 3. Boxed trait object. One vtable lookup per sample.
-    g.bench_function("Box<dyn> trait object", |b| {
-        let mut bx = spec.build_boxed::<f64>().unwrap();
-        b.iter(|| {
-            for (x, y) in input.iter().zip(output.iter_mut()) {
-                *y = bx.process_sample(*x);
-            }
-            black_box(&output[0]);
-        });
-    });
 }
 
 criterion_group!(

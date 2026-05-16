@@ -13,6 +13,7 @@ mod windowed_sinc;
 pub use auto::{Lowpass, LowpassBuildError, LowpassSpec};
 pub use biquad::{
     BiquadBandpassSpec, BiquadDesignError, BiquadHighpassSpec, BiquadLowpassSpec, BiquadNotchSpec,
+    BiquadScalar,
 };
 pub use ema::{ExponentialAverageError, ExponentialAverageSpec};
 pub use moving_average::{MovingAverageError, MovingAverageSpec};
