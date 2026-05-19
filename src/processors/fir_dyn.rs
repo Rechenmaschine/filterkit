@@ -2,7 +2,9 @@ use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use crate::traits::{Prepare, ProcessSpec, Reset, Retune, SampleProcessor};
+use crate::traits::{
+    FiltFiltKernel, Prepare, ProcessSpec, Reset, Retune, SampleProcessor, SteadyState,
+};
 
 /// Heap-backed FIR filter of arbitrary length.
 ///
@@ -82,11 +84,7 @@ impl<T: Default + Copy> Retune<Vec<T>> for FirDyn<T> {
 
 impl<T> SampleProcessor<T> for FirDyn<T>
 where
-    T: Copy
-        + Default
-        + num_traits::Zero
-        + core::ops::Mul<Output = T>
-        + core::ops::Add<Output = T>,
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
 {
     type Output = T;
 
@@ -109,5 +107,26 @@ where
             self.head = 0;
         }
         acc
+    }
+}
+
+impl<T> SteadyState<T> for FirDyn<T>
+where
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
+{
+    fn reset_to_steady_input(&mut self, input: T) {
+        for s in self.buf.iter_mut() {
+            *s = input;
+        }
+        self.head = 0;
+    }
+}
+
+impl<T> FiltFiltKernel<T> for FirDyn<T>
+where
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
+{
+    fn filtfilt_pad_len(&self) -> usize {
+        3 * self.b.len()
     }
 }

@@ -1,5 +1,5 @@
 use crate::coeffs::TransferFunction;
-use crate::traits::{Reset, Retune, SampleProcessor};
+use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// Direct-form I IIR realisation of a [`TransferFunction`].
 ///
@@ -90,5 +90,49 @@ where
         }
 
         acc
+    }
+}
+
+impl<T, const NB: usize, const NA: usize> SteadyState<T> for DirectFormI<T, NB, NA>
+where
+    T: Copy
+        + Default
+        + num_traits::One
+        + num_traits::Zero
+        + core::ops::Mul<Output = T>
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>
+        + core::ops::Div<Output = T>,
+{
+    fn reset_to_steady_input(&mut self, input: T) {
+        let mut numerator = T::zero();
+        for b in self.coeffs.b {
+            numerator = numerator + b;
+        }
+
+        let mut denominator = T::one();
+        for a in self.coeffs.a {
+            denominator = denominator + a;
+        }
+
+        let steady = numerator * input / denominator;
+        self.x = [input; NB];
+        self.y = [steady; NA];
+    }
+}
+
+impl<T, const NB: usize, const NA: usize> FiltFiltKernel<T> for DirectFormI<T, NB, NA>
+where
+    T: Copy
+        + Default
+        + num_traits::One
+        + num_traits::Zero
+        + core::ops::Mul<Output = T>
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>
+        + core::ops::Div<Output = T>,
+{
+    fn filtfilt_pad_len(&self) -> usize {
+        3 * NB.max(NA + 1)
     }
 }

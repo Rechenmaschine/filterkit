@@ -1,5 +1,5 @@
 use crate::coeffs::FirCoeffs;
-use crate::traits::{Reset, Retune, SampleProcessor};
+use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// Per-instance state for a length-`N` FIR filter.
 ///
@@ -101,11 +101,7 @@ impl<T, const N: usize> Retune<FirCoeffs<T, N>> for Fir<T, N> {
 
 impl<T, const N: usize> SampleProcessor<T> for Fir<T, N>
 where
-    T: Copy
-        + Default
-        + core::ops::Mul<Output = T>
-        + core::ops::Add<Output = T>
-        + num_traits::Zero,
+    T: Copy + Default + core::ops::Mul<Output = T> + core::ops::Add<Output = T> + num_traits::Zero,
 {
     type Output = T;
 
@@ -132,5 +128,24 @@ where
         }
 
         acc
+    }
+}
+
+impl<T, const N: usize> SteadyState<T> for Fir<T, N>
+where
+    T: Copy + Default + core::ops::Mul<Output = T> + core::ops::Add<Output = T> + num_traits::Zero,
+{
+    fn reset_to_steady_input(&mut self, input: T) {
+        self.state.buf = [input; N];
+        self.state.head = 0;
+    }
+}
+
+impl<T, const N: usize> FiltFiltKernel<T> for Fir<T, N>
+where
+    T: Copy + Default + core::ops::Mul<Output = T> + core::ops::Add<Output = T> + num_traits::Zero,
+{
+    fn filtfilt_pad_len(&self) -> usize {
+        3 * N
     }
 }

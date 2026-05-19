@@ -1,6 +1,6 @@
 use crate::coeffs::SosCoeffs;
 use crate::processors::biquad::BiquadState;
-use crate::traits::{Reset, Retune, SampleProcessor};
+use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// Cascade of `N` biquads in DF2T.
 ///
@@ -75,5 +75,63 @@ where
             x = y;
         }
         x
+    }
+}
+
+impl<T, const N: usize> SteadyState<T> for SosCascade<T, N>
+where
+    T: Copy
+        + num_traits::One
+        + num_traits::Zero
+        + PartialEq
+        + core::ops::Mul<Output = T>
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>
+        + core::ops::Div<Output = T>,
+{
+    fn reset_to_steady_input(&mut self, input: T) {
+        let one = T::one();
+        let mut section_input = input;
+
+        for i in 0..N {
+            let c = self.coeffs.sections[i];
+            let numerator = c.b0 + c.b1 + c.b2;
+            let denominator = one + c.a1 + c.a2;
+            let steady = numerator * section_input / denominator;
+            self.states[i].s1 = steady - c.b0 * section_input;
+            self.states[i].s2 = c.b2 * section_input - c.a2 * steady;
+            section_input = steady;
+        }
+    }
+}
+
+impl<T, const N: usize> FiltFiltKernel<T> for SosCascade<T, N>
+where
+    T: Copy
+        + num_traits::One
+        + num_traits::Zero
+        + PartialEq
+        + core::ops::Mul<Output = T>
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>
+        + core::ops::Div<Output = T>,
+{
+    fn filtfilt_pad_len(&self) -> usize {
+        if N == 0 {
+            return 0;
+        }
+
+        let mut zeros_at_origin = 0;
+        let mut poles_at_origin = 0;
+        for section in self.coeffs.sections {
+            if section.b2 == T::zero() {
+                zeros_at_origin += 1;
+            }
+            if section.a2 == T::zero() {
+                poles_at_origin += 1;
+            }
+        }
+
+        3 * (2 * N + 1 - zeros_at_origin.min(poles_at_origin))
     }
 }

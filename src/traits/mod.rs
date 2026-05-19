@@ -25,7 +25,7 @@ pub use ext::ProcessorExt;
 pub use prepare::{Prepare, ProcessSpec};
 pub use sample::{SampleFilter, SampleProcessor};
 pub use stream::{StreamProcessor, StreamStatus};
-pub use whole::WholeSignalProcessor;
+pub use whole::{FiltFiltKernel, SteadyState, WholeSignalProcessor};
 
 /// Clear runtime state of a processor *without* changing its coefficients
 /// or parameters.

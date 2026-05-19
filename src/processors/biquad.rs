@@ -1,5 +1,5 @@
 use crate::coeffs::BiquadCoeffs;
-use crate::traits::{Reset, Retune, SampleProcessor};
+use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// Direct-form-II transposed state for one biquad.
 ///
@@ -82,5 +82,41 @@ where
         self.state.s1 = s1_next;
         self.state.s2 = s2_next;
         y
+    }
+}
+
+impl<T> SteadyState<T> for Biquad<T>
+where
+    T: Copy
+        + num_traits::One
+        + num_traits::Zero
+        + core::ops::Mul<Output = T>
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>
+        + core::ops::Div<Output = T>,
+{
+    fn reset_to_steady_input(&mut self, input: T) {
+        let one = T::one();
+        let c = self.coeffs;
+        let numerator = c.b0 + c.b1 + c.b2;
+        let denominator = one + c.a1 + c.a2;
+        let steady = numerator * input / denominator;
+        self.state.s1 = steady - c.b0 * input;
+        self.state.s2 = c.b2 * input - c.a2 * steady;
+    }
+}
+
+impl<T> FiltFiltKernel<T> for Biquad<T>
+where
+    T: Copy
+        + num_traits::One
+        + num_traits::Zero
+        + core::ops::Mul<Output = T>
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>
+        + core::ops::Div<Output = T>,
+{
+    fn filtfilt_pad_len(&self) -> usize {
+        9
     }
 }

@@ -1,4 +1,4 @@
-use crate::traits::{Reset, Retune, SampleProcessor};
+use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// One-pole IIR / exponential moving average.
 ///
@@ -34,12 +34,18 @@ where
 {
     /// Build a one-pole filter with zero initial state.
     pub fn new(alpha: T) -> Self {
-        Self { alpha, y: T::zero() }
+        Self {
+            alpha,
+            y: T::zero(),
+        }
     }
 
     /// Build with a pre-loaded last-output value, for stitching blocks.
     pub fn with_state(alpha: T, last_output: T) -> Self {
-        Self { alpha, y: last_output }
+        Self {
+            alpha,
+            y: last_output,
+        }
     }
 
     /// Current output (the `y[n-1]` that the next call will see).
@@ -84,5 +90,33 @@ where
         let one = T::one();
         self.y = self.alpha * input + (one - self.alpha) * self.y;
         self.y
+    }
+}
+
+impl<T> SteadyState<T> for OnePole<T>
+where
+    T: Copy
+        + num_traits::One
+        + num_traits::Zero
+        + core::ops::Mul<Output = T>
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>,
+{
+    fn reset_to_steady_input(&mut self, input: T) {
+        self.y = input;
+    }
+}
+
+impl<T> FiltFiltKernel<T> for OnePole<T>
+where
+    T: Copy
+        + num_traits::One
+        + num_traits::Zero
+        + core::ops::Mul<Output = T>
+        + core::ops::Add<Output = T>
+        + core::ops::Sub<Output = T>,
+{
+    fn filtfilt_pad_len(&self) -> usize {
+        6
     }
 }

@@ -89,7 +89,8 @@ What's in:
   plus heap-backed `FirDyn` and `SosDyn`.
 - Stream: const-sized `Decimator`, `Interpolator`, and heap-backed
   `PolyphaseResampler`.
-- Whole-signal: `ForwardBackward` (skeleton — see below).
+- Whole-signal: `ForwardBackward` zero-phase filtering with SciPy-style
+  padding and steady-state pass initialisation.
 - Adaptive: `Lms`, `Nlms`.
 - Design: RBJ biquads (LP/HP/BP/notch), windowed-sinc FIR, moving
   average, exponential moving average (direct α / time constant /
@@ -102,9 +103,7 @@ What's deliberately out (planned for ≥0.2):
   `tf_to_sos`, `zpk_to_sos`).
 - ZPK representation.
 - Multi-channel processors.
-- Real `filtfilt` (current `ForwardBackward` is a bare double-pass with
-  no edge-handling tricks — expect boundary transients on short
-  signals).
+- Gustafsson initial-condition method for `filtfilt`.
 - RLS adaptive.
 
 ## License

@@ -1,4 +1,4 @@
-use crate::traits::{Reset, Retune, SampleProcessor};
+use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// Stateless multiplicative gain.
 ///
@@ -44,5 +44,23 @@ where
 
     fn process_sample(&mut self, input: T) -> Self::Output {
         input * self.value
+    }
+}
+
+impl<T> SteadyState<T> for Gain<T>
+where
+    T: Copy + core::ops::Mul<Output = T>,
+{
+    fn reset_to_steady_input(&mut self, _input: T) {
+        self.reset();
+    }
+}
+
+impl<T> FiltFiltKernel<T> for Gain<T>
+where
+    T: Copy + core::ops::Mul<Output = T>,
+{
+    fn filtfilt_pad_len(&self) -> usize {
+        0
     }
 }

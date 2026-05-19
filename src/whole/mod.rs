@@ -8,4 +8,4 @@
 mod filtfilt;
 
 #[cfg(feature = "alloc")]
-pub use filtfilt::ForwardBackward;
+pub use filtfilt::{ForwardBackward, PadType};
