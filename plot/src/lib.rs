@@ -1,0 +1,703 @@
+//! Plotting helpers for [`filterkit`].
+//!
+//! Thin builder wrappers around [`plotters`] that turn anything
+//! implementing [`filterkit::response::FrequencyResponse`] into a Bode
+//! plot, magnitude plot, or phase plot, and turn any
+//! [`SampleProcessor`] into an impulse- or step-response plot.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use filterkit::design::BiquadLowpassSpec;
+//! use filterkit::traits::Design;
+//! use filterkit_plot::bode;
+//!
+//! let coeffs = BiquadLowpassSpec { f0: 2_000.0 / 48_000.0, q: 0.707 }
+//!     .design()
+//!     .unwrap();
+//!
+//! bode(coeffs)
+//!     .sample_rate(48_000.0)
+//!     .title("2 kHz biquad lowpass")
+//!     .save("bode.png")
+//!     .unwrap();
+//! ```
+//!
+//! [`SampleProcessor`]: filterkit::traits::SampleProcessor
+
+#![deny(unsafe_code)]
+#![warn(missing_debug_implementations)]
+
+use std::error::Error;
+use std::path::Path;
+
+use filterkit::response::{
+    self, group_delay, impulse_response, logspace, magnitude_db_sweep, phase_unwrapped_sweep,
+    step_response, FrequencyResponse,
+};
+use filterkit::traits::{Reset, SampleProcessor};
+use plotters::coord::Shift;
+use plotters::prelude::*;
+
+// ---------------------------------------------------------------------
+// Style
+// ---------------------------------------------------------------------
+//
+// A calm, matplotlib-tab10-ish palette with light gridlines and dark
+// axis text. Anything visible in a plot should pull its colors and
+// typography from here, not from the plotters defaults.
+
+/// Primary line color (magnitude curves, default time-domain).
+const PRIMARY: RGBColor = RGBColor(31, 119, 180);
+/// Secondary line color (phase curves).
+const SECONDARY: RGBColor = RGBColor(214, 39, 40);
+/// Tertiary line color (group delay).
+const TERTIARY: RGBColor = RGBColor(44, 160, 44);
+
+/// Major gridline color (at labeled ticks).
+const GRID_BOLD: RGBColor = RGBColor(215, 215, 215);
+/// Minor gridline color (between labeled ticks).
+const GRID_LIGHT: RGBColor = RGBColor(235, 235, 235);
+/// Color used for axis lines, tick marks, and axis-label text.
+const AXIS: RGBColor = RGBColor(70, 70, 70);
+/// Color for caption/title text.
+const TITLE: RGBColor = RGBColor(40, 40, 40);
+/// Color for the y=0 reference line on time-domain plots.
+const BASELINE: RGBColor = RGBColor(180, 180, 180);
+
+/// Line stroke width used for plotted series.
+const LINE_W: u32 = 3;
+/// Font size for the chart caption.
+const FONT_TITLE: i32 = 32;
+/// Font size for axis descriptions (e.g. "f (Hz)").
+const FONT_DESC: i32 = 22;
+/// Font size for tick labels.
+const FONT_TICK: i32 = 18;
+/// Outer margin around each pane.
+const PANE_MARGIN: i32 = 28;
+/// Vertical space reserved for the X axis labels.
+const X_LABEL_AREA: i32 = 60;
+/// Horizontal space reserved for the Y axis labels.
+const Y_LABEL_AREA: i32 = 96;
+
+/// Above this sample count, time-domain plots skip per-sample dot
+/// markers so they don't become a wall of circles.
+const MAX_DOT_MARKERS: usize = 96;
+
+/// Errors that can come out of a `.save(...)` call.
+#[derive(Debug)]
+pub enum PlotError {
+    /// File extension was not recognised (only `.png` and `.svg` are
+    /// supported out of the box).
+    UnknownExtension(String),
+    /// Bubbled-up drawing or I/O error from plotters.
+    Drawing(Box<dyn Error + Send + Sync>),
+}
+
+impl std::fmt::Display for PlotError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownExtension(ext) => {
+                write!(f, "unknown plot file extension '{ext}' (expected png or svg)")
+            }
+            Self::Drawing(e) => write!(f, "plot drawing error: {e}"),
+        }
+    }
+}
+
+impl Error for PlotError {}
+
+/// Dispatch a generic drawing function (NOT a closure — closures can't
+/// be generic over the backend type) against whichever backend the
+/// path's extension picks. The macro expands the drawing call twice,
+/// once per backend, so monomorphisation kicks in for each.
+///
+/// Usage:
+/// ```ignore
+/// with_render_dispatch!(path, size, |root| draw_thing(root, ...))
+/// ```
+macro_rules! with_render_dispatch {
+    ($path:expr, $size:expr, |$root:ident| $call:expr) => {{
+        let path: &::std::path::Path = $path;
+        let size: (u32, u32) = $size;
+        match Backend::from_path(path)? {
+            Backend::Png => {
+                let $root = BitMapBackend::new(path, size).into_drawing_area();
+                $root
+                    .fill(&WHITE)
+                    .map_err(|e| PlotError::Drawing(Box::new(e)))?;
+                let $root = &$root;
+                $call.map_err(PlotError::Drawing)?;
+                $root
+                    .present()
+                    .map_err(|e| PlotError::Drawing(Box::new(e)))?;
+            }
+            Backend::Svg => {
+                let $root = SVGBackend::new(path, size).into_drawing_area();
+                $root
+                    .fill(&WHITE)
+                    .map_err(|e| PlotError::Drawing(Box::new(e)))?;
+                let $root = &$root;
+                $call.map_err(PlotError::Drawing)?;
+                $root
+                    .present()
+                    .map_err(|e| PlotError::Drawing(Box::new(e)))?;
+            }
+        }
+        Ok::<(), PlotError>(())
+    }};
+}
+
+enum Backend {
+    Png,
+    Svg,
+}
+
+impl Backend {
+    fn from_path(path: &Path) -> Result<Self, PlotError> {
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        match ext.as_str() {
+            "png" | "jpg" | "jpeg" | "bmp" => Ok(Self::Png),
+            "svg" => Ok(Self::Svg),
+            other => Err(PlotError::UnknownExtension(other.to_string())),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------
+// Bode plot
+// ---------------------------------------------------------------------
+
+/// Builder for a two-pane Bode plot (magnitude in dB, phase in degrees,
+/// both on a logarithmic frequency axis).
+#[derive(Debug)]
+pub struct BodePlot<R> {
+    responder: R,
+    sample_rate: f64,
+    freq_range: Option<(f64, f64)>,
+    n_points: usize,
+    title: Option<String>,
+    size: Option<(u32, u32)>,
+    show_group_delay: bool,
+}
+
+/// Start a Bode-plot builder for `r`.
+pub fn bode<R: FrequencyResponse>(r: R) -> BodePlot<R> {
+    BodePlot {
+        responder: r,
+        sample_rate: 1.0,
+        freq_range: None,
+        n_points: 1024,
+        title: None,
+        size: None,
+        show_group_delay: false,
+    }
+}
+
+impl<R: FrequencyResponse> BodePlot<R> {
+    pub fn sample_rate(mut self, fs: f64) -> Self {
+        self.sample_rate = fs;
+        self
+    }
+    pub fn freq_range(mut self, lo: f64, hi: f64) -> Self {
+        self.freq_range = Some((lo, hi));
+        self
+    }
+    pub fn n_points(mut self, n: usize) -> Self {
+        self.n_points = n;
+        self
+    }
+    pub fn title(mut self, t: impl Into<String>) -> Self {
+        self.title = Some(t.into());
+        self
+    }
+    pub fn size(mut self, w: u32, h: u32) -> Self {
+        self.size = Some((w, h));
+        self
+    }
+    pub fn with_group_delay(mut self, yes: bool) -> Self {
+        self.show_group_delay = yes;
+        self
+    }
+
+    /// Render the plot. File extension picks the backend (`.png` /
+    /// `.svg`).
+    pub fn save(self, path: impl AsRef<Path>) -> Result<(), PlotError> {
+        let path = path.as_ref();
+        let fs = self.sample_rate;
+        let (lo, hi) = self
+            .freq_range
+            .unwrap_or_else(|| (1e-3 * fs / 2.0, 0.5 * fs));
+        let freqs_axis = logspace(lo, hi, self.n_points);
+        let freqs_norm: Vec<f64> = freqs_axis.iter().map(|&f| f / fs).collect();
+        let mag_db = magnitude_db_sweep(&self.responder, &freqs_norm);
+        let phase_deg: Vec<f64> = phase_unwrapped_sweep(&self.responder, &freqs_norm)
+            .into_iter()
+            .map(|p| p * 180.0 / std::f64::consts::PI)
+            .collect();
+        let group = if self.show_group_delay {
+            Some(group_delay(&self.responder, &freqs_norm))
+        } else {
+            None
+        };
+        let title = self.title.unwrap_or_else(|| "Bode plot".to_string());
+        let size = self
+            .size
+            .unwrap_or(if self.show_group_delay { (1600, 1200) } else { (1600, 900) });
+        let x_desc = if fs == 1.0 { "f (cycles/sample)" } else { "f (Hz)" };
+
+        with_render_dispatch!(path, size, |root| draw_bode(
+            root,
+            &title,
+            x_desc,
+            lo,
+            hi,
+            &freqs_axis,
+            &mag_db,
+            &phase_deg,
+            group.as_deref(),
+        ))
+    }
+}
+
+fn draw_bode<DB>(
+    root: &DrawingArea<DB, Shift>,
+    title: &str,
+    x_desc: &str,
+    lo: f64,
+    hi: f64,
+    freqs_axis: &[f64],
+    mag_db: &[f64],
+    phase_deg: &[f64],
+    group: Option<&[f64]>,
+) -> Result<(), Box<dyn Error + Send + Sync>>
+where
+    DB: DrawingBackend,
+    DB::ErrorType: 'static,
+{
+    let panes = if group.is_some() { 3 } else { 2 };
+    let areas = root.split_evenly((panes, 1));
+
+    // Magnitude — only this pane carries the overall title.
+    let (mag_lo, mag_hi) = pad_range_min_max(mag_db, 6.0);
+    let mut mag_chart = ChartBuilder::on(&areas[0])
+        .caption(title, ("sans-serif", FONT_TITLE, &TITLE))
+        .margin(PANE_MARGIN)
+        .x_label_area_size(X_LABEL_AREA)
+        .y_label_area_size(Y_LABEL_AREA)
+        .build_cartesian_2d((lo..hi).log_scale(), mag_lo..mag_hi)?;
+    configure_styled_mesh(&mut mag_chart, x_desc, "|H| (dB)")?;
+    mag_chart.draw_series(LineSeries::new(
+        freqs_axis.iter().copied().zip(mag_db.iter().copied()),
+        PRIMARY.stroke_width(LINE_W),
+    ))?;
+
+    // Phase
+    let (ph_lo, ph_hi) = pad_range_min_max(phase_deg, 15.0);
+    let mut ph_chart = ChartBuilder::on(&areas[1])
+        .margin(PANE_MARGIN)
+        .x_label_area_size(X_LABEL_AREA)
+        .y_label_area_size(Y_LABEL_AREA)
+        .build_cartesian_2d((lo..hi).log_scale(), ph_lo..ph_hi)?;
+    configure_styled_mesh(&mut ph_chart, x_desc, "phase (deg)")?;
+    ph_chart.draw_series(LineSeries::new(
+        freqs_axis.iter().copied().zip(phase_deg.iter().copied()),
+        SECONDARY.stroke_width(LINE_W),
+    ))?;
+
+    // Group delay (optional)
+    if let Some(gd) = group {
+        let (g_lo, g_hi) = pad_range_min_max(gd, 0.5);
+        let mut g_chart = ChartBuilder::on(&areas[2])
+            .margin(PANE_MARGIN)
+            .x_label_area_size(X_LABEL_AREA)
+            .y_label_area_size(Y_LABEL_AREA)
+            .build_cartesian_2d((lo..hi).log_scale(), g_lo..g_hi)?;
+        configure_styled_mesh(&mut g_chart, x_desc, "group delay (samples)")?;
+        g_chart.draw_series(LineSeries::new(
+            freqs_axis.iter().copied().zip(gd.iter().copied()),
+            TERTIARY.stroke_width(LINE_W),
+        ))?;
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------
+// Single-pane magnitude
+// ---------------------------------------------------------------------
+
+/// Builder for a single-pane magnitude (dB) plot.
+#[derive(Debug)]
+pub struct MagnitudePlot<R> {
+    responder: R,
+    sample_rate: f64,
+    freq_range: Option<(f64, f64)>,
+    n_points: usize,
+    title: Option<String>,
+    size: (u32, u32),
+    log_x: bool,
+}
+
+/// Start a magnitude-only plot builder.
+pub fn magnitude<R: FrequencyResponse>(r: R) -> MagnitudePlot<R> {
+    MagnitudePlot {
+        responder: r,
+        sample_rate: 1.0,
+        freq_range: None,
+        n_points: 1024,
+        title: None,
+        size: (1600, 500),
+        log_x: true,
+    }
+}
+
+impl<R: FrequencyResponse> MagnitudePlot<R> {
+    pub fn sample_rate(mut self, fs: f64) -> Self {
+        self.sample_rate = fs;
+        self
+    }
+    pub fn freq_range(mut self, lo: f64, hi: f64) -> Self {
+        self.freq_range = Some((lo, hi));
+        self
+    }
+    pub fn n_points(mut self, n: usize) -> Self {
+        self.n_points = n;
+        self
+    }
+    pub fn title(mut self, t: impl Into<String>) -> Self {
+        self.title = Some(t.into());
+        self
+    }
+    pub fn size(mut self, w: u32, h: u32) -> Self {
+        self.size = (w, h);
+        self
+    }
+    pub fn linear_x(mut self) -> Self {
+        self.log_x = false;
+        self
+    }
+    pub fn save(self, path: impl AsRef<Path>) -> Result<(), PlotError> {
+        let path = path.as_ref();
+        let fs = self.sample_rate;
+        let (lo, hi) = self
+            .freq_range
+            .unwrap_or_else(|| (1e-3 * fs / 2.0, 0.5 * fs));
+        let freqs_axis = if self.log_x {
+            logspace(lo, hi, self.n_points)
+        } else {
+            response::linspace(lo, hi, self.n_points)
+        };
+        let freqs_norm: Vec<f64> = freqs_axis.iter().map(|&f| f / fs).collect();
+        let mag_db = magnitude_db_sweep(&self.responder, &freqs_norm);
+        let title = self.title.unwrap_or_else(|| "Magnitude".to_string());
+        let size = self.size;
+        let log_x = self.log_x;
+        let x_desc = if fs == 1.0 { "f (cycles/sample)" } else { "f (Hz)" };
+
+        with_render_dispatch!(path, size, |root| draw_magnitude(
+            root,
+            &title,
+            x_desc,
+            lo,
+            hi,
+            log_x,
+            &freqs_axis,
+            &mag_db,
+        ))
+    }
+}
+
+fn draw_magnitude<DB>(
+    root: &DrawingArea<DB, Shift>,
+    title: &str,
+    x_desc: &str,
+    lo: f64,
+    hi: f64,
+    log_x: bool,
+    freqs_axis: &[f64],
+    mag_db: &[f64],
+) -> Result<(), Box<dyn Error + Send + Sync>>
+where
+    DB: DrawingBackend,
+    DB::ErrorType: 'static,
+{
+    let (y_lo, y_hi) = pad_range_min_max(mag_db, 6.0);
+    if log_x {
+        let mut chart = ChartBuilder::on(root)
+            .caption(title, ("sans-serif", FONT_TITLE, &TITLE))
+            .margin(PANE_MARGIN)
+            .x_label_area_size(X_LABEL_AREA)
+            .y_label_area_size(Y_LABEL_AREA)
+            .build_cartesian_2d((lo..hi).log_scale(), y_lo..y_hi)?;
+        configure_styled_mesh(&mut chart, x_desc, "|H| (dB)")?;
+        chart.draw_series(LineSeries::new(
+            freqs_axis.iter().copied().zip(mag_db.iter().copied()),
+            PRIMARY.stroke_width(LINE_W),
+        ))?;
+    } else {
+        let mut chart = ChartBuilder::on(root)
+            .caption(title, ("sans-serif", FONT_TITLE, &TITLE))
+            .margin(PANE_MARGIN)
+            .x_label_area_size(X_LABEL_AREA)
+            .y_label_area_size(Y_LABEL_AREA)
+            .build_cartesian_2d(lo..hi, y_lo..y_hi)?;
+        configure_styled_mesh(&mut chart, x_desc, "|H| (dB)")?;
+        chart.draw_series(LineSeries::new(
+            freqs_axis.iter().copied().zip(mag_db.iter().copied()),
+            PRIMARY.stroke_width(LINE_W),
+        ))?;
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------
+// Time-domain: impulse and step
+// ---------------------------------------------------------------------
+
+/// Builder for an impulse-response plot.
+#[derive(Debug)]
+pub struct ImpulsePlot<'p, P> {
+    processor: &'p mut P,
+    n: usize,
+    title: Option<String>,
+    size: (u32, u32),
+}
+
+/// Start an impulse-response plot for `p`. `p` is reset before
+/// sampling.
+pub fn impulse<P>(p: &mut P) -> ImpulsePlot<'_, P>
+where
+    P: SampleProcessor<f64, Output = f64> + Reset,
+{
+    ImpulsePlot {
+        processor: p,
+        n: 64,
+        title: None,
+        size: (1600, 500),
+    }
+}
+
+impl<P> ImpulsePlot<'_, P>
+where
+    P: SampleProcessor<f64, Output = f64> + Reset,
+{
+    pub fn n(mut self, n: usize) -> Self {
+        self.n = n;
+        self
+    }
+    pub fn title(mut self, t: impl Into<String>) -> Self {
+        self.title = Some(t.into());
+        self
+    }
+    pub fn size(mut self, w: u32, h: u32) -> Self {
+        self.size = (w, h);
+        self
+    }
+    pub fn save(self, path: impl AsRef<Path>) -> Result<(), PlotError> {
+        let h = impulse_response(self.processor, self.n);
+        let title = self.title.unwrap_or_else(|| "Impulse response".to_string());
+        save_samples(path.as_ref(), self.size, &title, "n (samples)", "h[n]", &h, PRIMARY)
+    }
+}
+
+/// Builder for a step-response plot.
+#[derive(Debug)]
+pub struct StepPlot<'p, P> {
+    processor: &'p mut P,
+    n: usize,
+    title: Option<String>,
+    size: (u32, u32),
+}
+
+/// Start a step-response plot for `p`. Resets `p` before sampling.
+pub fn step<P>(p: &mut P) -> StepPlot<'_, P>
+where
+    P: SampleProcessor<f64, Output = f64> + Reset,
+{
+    StepPlot {
+        processor: p,
+        n: 128,
+        title: None,
+        size: (1600, 500),
+    }
+}
+
+impl<P> StepPlot<'_, P>
+where
+    P: SampleProcessor<f64, Output = f64> + Reset,
+{
+    pub fn n(mut self, n: usize) -> Self {
+        self.n = n;
+        self
+    }
+    pub fn title(mut self, t: impl Into<String>) -> Self {
+        self.title = Some(t.into());
+        self
+    }
+    pub fn size(mut self, w: u32, h: u32) -> Self {
+        self.size = (w, h);
+        self
+    }
+    pub fn save(self, path: impl AsRef<Path>) -> Result<(), PlotError> {
+        let s = step_response(self.processor, self.n);
+        let title = self.title.unwrap_or_else(|| "Step response".to_string());
+        save_samples(path.as_ref(), self.size, &title, "n (samples)", "y[n]", &s, SECONDARY)
+    }
+}
+
+fn save_samples(
+    path: &Path,
+    size: (u32, u32),
+    title: &str,
+    x_desc: &str,
+    y_desc: &str,
+    samples: &[f64],
+    color: RGBColor,
+) -> Result<(), PlotError> {
+    let title = title.to_string();
+    let x_desc = x_desc.to_string();
+    let y_desc = y_desc.to_string();
+    let samples = samples.to_vec();
+    with_render_dispatch!(path, size, |root| draw_samples(
+        root,
+        &title,
+        &x_desc,
+        &y_desc,
+        &samples,
+        color,
+    ))
+}
+
+fn draw_samples<DB>(
+    root: &DrawingArea<DB, Shift>,
+    title: &str,
+    x_desc: &str,
+    y_desc: &str,
+    samples: &[f64],
+    color: RGBColor,
+) -> Result<(), Box<dyn Error + Send + Sync>>
+where
+    DB: DrawingBackend,
+    DB::ErrorType: 'static,
+{
+    let n = samples.len();
+    let (y_lo, y_hi) = pad_range_min_max(samples, 0.1);
+    let x_hi = n.saturating_sub(1).max(1) as f64;
+    let mut chart = ChartBuilder::on(root)
+        .caption(title, ("sans-serif", FONT_TITLE, &TITLE))
+        .margin(PANE_MARGIN)
+        .x_label_area_size(X_LABEL_AREA)
+        .y_label_area_size(Y_LABEL_AREA)
+        .build_cartesian_2d(0f64..x_hi, y_lo..y_hi)?;
+    configure_styled_mesh(&mut chart, x_desc, y_desc)?;
+
+    // y=0 baseline first so series sits on top of it.
+    if y_lo < 0.0 && y_hi > 0.0 {
+        chart.draw_series(LineSeries::new(
+            [(0.0, 0.0), (x_hi, 0.0)],
+            BASELINE.stroke_width(1),
+        ))?;
+    }
+
+    chart.draw_series(LineSeries::new(
+        samples.iter().enumerate().map(|(i, &y)| (i as f64, y)),
+        color.stroke_width(LINE_W),
+    ))?;
+    // Per-sample dots are useful for short responses but become noise
+    // past ~100 samples.
+    if n <= MAX_DOT_MARKERS {
+        chart.draw_series(
+            samples
+                .iter()
+                .enumerate()
+                .map(|(i, &y)| Circle::new((i as f64, y), 3, color.filled())),
+        )?;
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------
+
+/// Apply the calm shared styling to a chart's mesh: light/sparse
+/// gridlines, dark thin axis lines, decent-size labels, and tidy tick
+/// formatting (no "100.0" or "-0.0" noise).
+fn configure_styled_mesh<DB, X, Y>(
+    chart: &mut ChartContext<'_, DB, Cartesian2d<X, Y>>,
+    x_desc: &str,
+    y_desc: &str,
+) -> Result<(), Box<dyn Error + Send + Sync>>
+where
+    DB: DrawingBackend,
+    DB::ErrorType: 'static,
+    X: plotters::coord::ranged1d::Ranged<ValueType = f64>
+        + plotters::coord::ranged1d::ValueFormatter<f64>,
+    Y: plotters::coord::ranged1d::Ranged<ValueType = f64>
+        + plotters::coord::ranged1d::ValueFormatter<f64>,
+{
+    chart
+        .configure_mesh()
+        .light_line_style(GRID_LIGHT)
+        .bold_line_style(GRID_BOLD)
+        .axis_style(AXIS.stroke_width(1))
+        .label_style(("sans-serif", FONT_TICK, &AXIS))
+        .x_desc(x_desc)
+        .y_desc(y_desc)
+        .axis_desc_style(("sans-serif", FONT_DESC, &AXIS))
+        .x_label_formatter(&format_tick)
+        .y_label_formatter(&format_tick)
+        .draw()?;
+    Ok(())
+}
+
+/// Tick label formatter that suppresses trailing zeros and the
+/// `-0.0` artefact that comes out of plotters' default formatting.
+fn format_tick(v: &f64) -> String {
+    let v = *v;
+    if v.abs() < 1e-10 {
+        return "0".to_string();
+    }
+    if v.fract() == 0.0 && v.abs() < 1e15 {
+        return format!("{}", v as i64);
+    }
+    if v.abs() < 1.0 {
+        format!("{v:.3}")
+    } else if v.abs() < 100.0 {
+        format!("{v:.2}")
+    } else {
+        format!("{v:.1}")
+    }
+}
+
+/// Min/max of the finite entries in `samples`, padded outward by
+/// `min_pad` so a flat curve still has visible vertical space.
+///
+/// Non-finite samples (`±Inf`, `NaN`) are skipped — magnitude-in-dB
+/// hits `-Inf` whenever the filter has a zero on the unit circle (a
+/// biquad RBJ lowpass has one at Nyquist), and one such sample
+/// shouldn't blow up the whole axis.
+fn pad_range_min_max(samples: &[f64], min_pad: f64) -> (f64, f64) {
+    let mut lo = f64::INFINITY;
+    let mut hi = f64::NEG_INFINITY;
+    for &s in samples {
+        if s.is_finite() {
+            if s < lo {
+                lo = s;
+            }
+            if s > hi {
+                hi = s;
+            }
+        }
+    }
+    if lo == f64::INFINITY || hi == f64::NEG_INFINITY {
+        return (-1.0, 1.0);
+    }
+    let span = hi - lo;
+    let pad = (span * 0.05).max(min_pad);
+    (lo - pad, hi + pad)
+}

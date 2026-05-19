@@ -1,3 +1,7 @@
+[workspace]
+members = ["plot"]
+resolver = "2"
+
 [package]
 name = "filterkit"
 version = "0.1.0"

@@ -69,6 +69,9 @@ pub mod adaptive;
 #[cfg(feature = "design")]
 pub mod design;
 
+#[cfg(all(feature = "alloc", feature = "design"))]
+pub mod response;
+
 // Re-export the core surface for ergonomic use.
 pub use traits::{
     AdaptiveProcessor, BlockProcessor, Design, Prepare, ProcessSpec, ProcessorExt, Reset, Retune,
