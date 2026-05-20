@@ -34,3 +34,15 @@ impl<T: Default + Copy, const N: usize> Default for FirCoeffs<T, N> {
         Self { b: [T::default(); N] }
     }
 }
+
+impl<T, const N: usize> From<FirCoeffs<T, N>> for crate::coeffs::TransferFunction<T, N, 0> {
+    fn from(c: FirCoeffs<T, N>) -> Self {
+        Self { b: c.b, a: [] }
+    }
+}
+
+impl<T, const N: usize> From<crate::coeffs::TransferFunction<T, N, 0>> for FirCoeffs<T, N> {
+    fn from(tf: crate::coeffs::TransferFunction<T, N, 0>) -> Self {
+        Self { b: tf.b }
+    }
+}

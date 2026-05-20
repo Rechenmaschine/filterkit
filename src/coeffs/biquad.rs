@@ -76,3 +76,15 @@ impl<T: Copy> From<BiquadCoeffs<T>> for crate::coeffs::TransferFunction<T, 3, 2>
         c.to_transfer_function()
     }
 }
+
+impl<T: Copy> From<crate::coeffs::TransferFunction<T, 3, 2>> for BiquadCoeffs<T> {
+    fn from(tf: crate::coeffs::TransferFunction<T, 3, 2>) -> Self {
+        Self {
+            b0: tf.b[0],
+            b1: tf.b[1],
+            b2: tf.b[2],
+            a1: tf.a[0],
+            a2: tf.a[1],
+        }
+    }
+}
