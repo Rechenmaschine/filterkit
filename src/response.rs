@@ -1,34 +1,28 @@
 //! Vector-producing response helpers for analysis and plotting.
 //!
 //! The per-frequency primitives live on each coefficient type in
-//! [`crate::design::freq_response`] (see [`FirCoeffs::magnitude_at`],
-//! [`BiquadCoeffs::magnitude_at`], [`SosCoeffs::magnitude_at`]). This
-//! module wraps them with:
+//! [`crate::design::freq_response`]. This module wraps them with:
 //!
 //! - a [`FrequencyResponse`] trait so downstream code can be generic
-//!   over FIR / biquad / SOS,
+//!   over the various coefficient types,
 //! - sweep helpers that evaluate magnitude/phase over a frequency grid,
 //! - phase unwrapping and (numerical) group delay,
 //! - [`impulse_response`] / [`step_response`] for any [`SampleProcessor`].
 //!
 //! Requires the `alloc` and `design` features.
-//!
-//! [`FirCoeffs::magnitude_at`]: crate::coeffs::FirCoeffs::magnitude_at
-//! [`BiquadCoeffs::magnitude_at`]: crate::coeffs::BiquadCoeffs::magnitude_at
-//! [`SosCoeffs::magnitude_at`]: crate::coeffs::SosCoeffs::magnitude_at
 
 use alloc::vec::Vec;
 
-use crate::coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs};
+use crate::coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, TransferFunction};
 use crate::traits::{Reset, SampleProcessor};
 
 /// Anything that can be queried for `|H(e^{j 2π f})|` and its phase at a
 /// normalised frequency `f ∈ [0, 0.5]`.
 ///
-/// Blanket-implemented for [`FirCoeffs`], [`BiquadCoeffs`] and
-/// [`SosCoeffs`] in both `f32` and `f64` flavours. Implement it for
-/// custom coefficient types to plug them into the sweep helpers and
-/// `filterkit-plot`.
+/// Implemented for [`TransferFunction`], [`FirCoeffs`], [`BiquadCoeffs`]
+/// and [`SosCoeffs`] for any numeric type that casts to `f64`. Implement
+/// it for custom coefficient types to plug them into the sweep helpers
+/// and `filterkit-plot`.
 pub trait FrequencyResponse {
     /// `|H(e^{j 2π f})|`.
     fn magnitude_at(&self, f: f64) -> f64;
@@ -37,46 +31,51 @@ pub trait FrequencyResponse {
     fn phase_at(&self, f: f64) -> f64;
 }
 
-macro_rules! impl_freq_response {
-    ($ty:ty) => {
-        impl FrequencyResponse for $ty {
-            fn magnitude_at(&self, f: f64) -> f64 {
-                <$ty>::magnitude_at(self, f)
-            }
-            fn phase_at(&self, f: f64) -> f64 {
-                <$ty>::phase_at(self, f)
-            }
-        }
-    };
-}
-
-impl<const N: usize> FrequencyResponse for FirCoeffs<f64, N> {
+impl<T, const NB: usize, const NA: usize> FrequencyResponse for TransferFunction<T, NB, NA>
+where
+    T: Copy + Into<f64>,
+{
     fn magnitude_at(&self, f: f64) -> f64 {
-        FirCoeffs::<f64, N>::magnitude_at(self, f)
+        TransferFunction::<T, NB, NA>::magnitude_at(self, f)
     }
     fn phase_at(&self, f: f64) -> f64 {
-        FirCoeffs::<f64, N>::phase_at(self, f)
+        TransferFunction::<T, NB, NA>::phase_at(self, f)
     }
 }
 
-impl<const N: usize> FrequencyResponse for FirCoeffs<f32, N> {
+impl<T, const N: usize> FrequencyResponse for FirCoeffs<T, N>
+where
+    T: Copy + Into<f64>,
+{
     fn magnitude_at(&self, f: f64) -> f64 {
-        FirCoeffs::<f32, N>::magnitude_at(self, f)
+        FirCoeffs::<T, N>::magnitude_at(self, f)
     }
     fn phase_at(&self, f: f64) -> f64 {
-        FirCoeffs::<f32, N>::phase_at(self, f)
+        FirCoeffs::<T, N>::phase_at(self, f)
     }
 }
 
-impl_freq_response!(BiquadCoeffs<f64>);
-impl_freq_response!(BiquadCoeffs<f32>);
-
-impl<const N: usize> FrequencyResponse for SosCoeffs<f64, N> {
+impl<T> FrequencyResponse for BiquadCoeffs<T>
+where
+    T: Copy + Into<f64>,
+{
     fn magnitude_at(&self, f: f64) -> f64 {
-        SosCoeffs::<f64, N>::magnitude_at(self, f)
+        BiquadCoeffs::<T>::magnitude_at(self, f)
     }
     fn phase_at(&self, f: f64) -> f64 {
-        SosCoeffs::<f64, N>::phase_at(self, f)
+        BiquadCoeffs::<T>::phase_at(self, f)
+    }
+}
+
+impl<T, const N: usize> FrequencyResponse for SosCoeffs<T, N>
+where
+    T: Copy + Into<f64>,
+{
+    fn magnitude_at(&self, f: f64) -> f64 {
+        SosCoeffs::<T, N>::magnitude_at(self, f)
+    }
+    fn phase_at(&self, f: f64) -> f64 {
+        SosCoeffs::<T, N>::phase_at(self, f)
     }
 }
 

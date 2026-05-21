@@ -35,6 +35,15 @@ impl<T: Default + Copy, const N: usize> Default for FirCoeffs<T, N> {
     }
 }
 
+impl<T: Copy, const N: usize> FirCoeffs<T, N> {
+    /// Lift this FIR into the equivalent
+    /// [`TransferFunction`](crate::coeffs::TransferFunction) with no
+    /// denominator taps.
+    pub fn to_transfer_function(self) -> crate::coeffs::TransferFunction<T, N, 0> {
+        crate::coeffs::TransferFunction::new(self.b, [])
+    }
+}
+
 impl<T, const N: usize> From<FirCoeffs<T, N>> for crate::coeffs::TransferFunction<T, N, 0> {
     fn from(c: FirCoeffs<T, N>) -> Self {
         Self { b: c.b, a: [] }
