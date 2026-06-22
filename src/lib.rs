@@ -81,7 +81,8 @@ pub use traits::{
 pub use coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, StateSpace, TransferFunction};
 
 pub use processors::{
-    Biquad, Delay, DirectFormI, Fir, Gain, OnePole, SosCascade, StateSpaceProcessor,
+    Biquad, Delay, DirectFormI, Ema, Fir, FirstOrder, FirstOrderCoeffs, Gain, SosCascade,
+    StateSpaceProcessor,
 };
 
 pub use combinators::{Bypass, Chain, Map, Parallel, Sum, Tap, WetDry};

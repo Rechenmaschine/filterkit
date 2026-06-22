@@ -1,11 +1,11 @@
 //! Tests for sample-by-sample processors.
 
 use approx::assert_relative_eq;
-use filterkit::{
-    BiquadCoeffs, Delay, FirCoeffs, Gain, OnePole, ProcessorExt, Reset, Retune, SampleFilter,
-    SampleProcessor,
-};
 use filterkit::processors::{Biquad, Fir};
+use filterkit::{
+    BiquadCoeffs, Delay, Ema, FirCoeffs, FirstOrder, FirstOrderCoeffs, Gain, ProcessorExt, Reset,
+    Retune, SampleProcessor,
+};
 
 #[test]
 fn gain_is_pure_multiplication() {
@@ -136,17 +136,17 @@ fn wet_dry_blends() {
 }
 
 #[test]
-fn one_pole_alpha_one_is_passthrough() {
-    let mut p = OnePole::new(1.0_f32);
+fn ema_alpha_one_is_passthrough() {
+    let mut p = Ema::new(1.0_f32);
     for x in [0.5, -0.3, 1.2, -2.0] {
         assert_relative_eq!(p.process_sample(x), x, epsilon = 1e-6);
     }
 }
 
 #[test]
-fn one_pole_converges_to_dc_input() {
+fn ema_converges_to_dc_input() {
     // Step response of EMA reaches the input asymptotically.
-    let mut p = OnePole::new(0.1_f32);
+    let mut p = Ema::new(0.1_f32);
     let mut last = 0.0;
     for _ in 0..500 {
         last = p.process_sample(1.0);
@@ -155,29 +155,50 @@ fn one_pole_converges_to_dc_input() {
 }
 
 #[test]
-fn one_pole_with_state_continues_block() {
+fn ema_with_state_continues_block() {
     // First block through a fresh filter, then second block through a
     // filter warm-started with the prior output — output must equal
     // running the whole signal through one filter.
     let signal: [f32; 20] = [
-        0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.4,
-        -0.3, -0.2, -0.1, 0.0,
+        0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.4, -0.3,
+        -0.2, -0.1, 0.0,
     ];
     let alpha = 0.25_f32;
     let split = 8;
 
-    let mut full = OnePole::new(alpha);
+    let mut full = Ema::new(alpha);
     let full_out: Vec<f32> = signal.iter().map(|&x| full.process_sample(x)).collect();
 
-    let mut a = OnePole::new(alpha);
+    let mut a = Ema::new(alpha);
     let mut last = 0.0;
     for &x in &signal[..split] {
         last = a.process_sample(x);
     }
-    let mut b = OnePole::with_state(alpha, last);
+    let mut b = Ema::with_state(alpha, last);
     for n in split..signal.len() {
         let y = b.process_sample(signal[n]);
         assert_relative_eq!(y, full_out[n], max_relative = 1e-6, epsilon = 1e-7);
+    }
+}
+
+#[test]
+fn first_order_identity_is_passthrough() {
+    let mut p = FirstOrder::new(FirstOrderCoeffs::identity());
+    for x in [0.5_f32, -0.3, 1.2, -2.0] {
+        assert_relative_eq!(p.process_sample(x), x, epsilon = 1e-6);
+    }
+}
+
+#[test]
+fn first_order_supports_general_feedforward_and_feedback() {
+    // y[n] = 0.25*x[n] + 0.5*x[n-1] + 0.25*y[n-1]
+    let coeffs = FirstOrderCoeffs::new(0.25_f64, 0.5, -0.25);
+    let mut p = FirstOrder::new(coeffs);
+
+    let xs = [1.0, 0.0, 0.0, 0.0];
+    let expected = [0.25, 0.5625, 0.140625, 0.03515625];
+    for (x, want) in xs.into_iter().zip(expected) {
+        assert_relative_eq!(p.process_sample(x), want, epsilon = 1e-12);
     }
 }
 

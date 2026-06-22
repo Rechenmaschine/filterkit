@@ -3,3 +3,7 @@ Cargo.lock
 *.swp
 *.swo
 .DS_Store
+
+# Generated plot artifacts
+*.png
+*.svg

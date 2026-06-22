@@ -5,21 +5,28 @@
 //! plot, magnitude plot, or phase plot, and turn any
 //! [`SampleProcessor`] into an impulse- or step-response plot.
 //!
+//! Each plot has two finishers:
+//!
+//! - [`BodePlot::save`] (and equivalents) writes to a file — `.png`,
+//!   `.jpg`, or `.svg` picked by extension.
+//! - [`BodePlot::show`] (and equivalents) writes to a temp SVG and
+//!   opens it in the system's default viewer (browser / Preview / …),
+//!   giving you basic zoom and pan for free.
+//!
 //! # Example
 //!
 //! ```no_run
 //! use filterkit::design::BiquadLowpassSpec;
-//! use filterkit::traits::Design;
-//! use filterkit_plot::bode;
+//! use filterkit_plot::BodePlot;
 //!
 //! let coeffs = BiquadLowpassSpec { f0: 2_000.0 / 48_000.0, q: 0.707 }
 //!     .design()
 //!     .unwrap();
 //!
-//! bode(coeffs)
+//! BodePlot::new(coeffs)
 //!     .sample_rate(48_000.0)
 //!     .title("2 kHz biquad lowpass")
-//!     .save("bode.png")
+//!     .show()
 //!     .unwrap();
 //! ```
 //!
@@ -29,7 +36,9 @@
 #![warn(missing_debug_implementations)]
 
 use std::error::Error;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use filterkit::response::{
     self, group_delay, impulse_response, logspace, magnitude_db_sweep, phase_unwrapped_sweep,
@@ -84,7 +93,7 @@ const Y_LABEL_AREA: i32 = 96;
 /// markers so they don't become a wall of circles.
 const MAX_DOT_MARKERS: usize = 96;
 
-/// Errors that can come out of a `.save(...)` call.
+/// Errors that can come out of a `.save(...)` or `.show(...)` call.
 #[derive(Debug)]
 pub enum PlotError {
     /// File extension was not recognised (only `.png` and `.svg` are
@@ -92,6 +101,9 @@ pub enum PlotError {
     UnknownExtension(String),
     /// Bubbled-up drawing or I/O error from plotters.
     Drawing(Box<dyn Error + Send + Sync>),
+    /// `.show()` failed to launch the system viewer. The string is the
+    /// command we tried to run.
+    Open(String, std::io::Error),
 }
 
 impl std::fmt::Display for PlotError {
@@ -101,11 +113,52 @@ impl std::fmt::Display for PlotError {
                 write!(f, "unknown plot file extension '{ext}' (expected png or svg)")
             }
             Self::Drawing(e) => write!(f, "plot drawing error: {e}"),
+            Self::Open(cmd, e) => write!(f, "failed to launch viewer ('{cmd}'): {e}"),
         }
     }
 }
 
 impl Error for PlotError {}
+
+// ---------------------------------------------------------------------
+// .show() helpers — temp file + system viewer
+// ---------------------------------------------------------------------
+
+/// `temp_dir() / "filterkit-plot-{stem}-{nonce}.{ext}"`.
+fn temp_path(stem: &str, ext: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0);
+    let nonce = nanos ^ (std::process::id() as u64);
+    std::env::temp_dir().join(format!("filterkit-plot-{stem}-{nonce:x}.{ext}"))
+}
+
+/// Hand `path` to the platform's default opener.
+fn open_path(path: &Path) -> Result<(), PlotError> {
+    let cmd = if cfg!(target_os = "macos") {
+        "open"
+    } else if cfg!(target_os = "windows") {
+        "explorer"
+    } else {
+        "xdg-open"
+    };
+    Command::new(cmd)
+        .arg(path)
+        .status()
+        .map(|_| ())
+        .map_err(|e| PlotError::Open(cmd.to_string(), e))
+}
+
+/// Render to a temp SVG and open it in the system viewer.
+fn show_via_save<F>(stem: &str, save: F) -> Result<(), PlotError>
+where
+    F: FnOnce(&Path) -> Result<(), PlotError>,
+{
+    let path = temp_path(stem, "svg");
+    save(&path)?;
+    open_path(&path)
+}
 
 /// Dispatch a generic drawing function (NOT a closure — closures can't
 /// be generic over the backend type) against whichever backend the
@@ -185,20 +238,24 @@ pub struct BodePlot<R> {
     show_group_delay: bool,
 }
 
-/// Start a Bode-plot builder for `r`.
-pub fn bode<R: FrequencyResponse>(r: R) -> BodePlot<R> {
-    BodePlot {
-        responder: r,
-        sample_rate: 1.0,
-        freq_range: None,
-        n_points: 1024,
-        title: None,
-        size: None,
-        show_group_delay: false,
-    }
-}
-
 impl<R: FrequencyResponse> BodePlot<R> {
+    /// Start a Bode-plot builder for `r`.
+    ///
+    /// `r` can be a coefficient block (e.g. `BiquadCoeffs`), an SOS
+    /// cascade, or any custom type implementing [`FrequencyResponse`].
+    /// A reference is also accepted.
+    pub fn new(r: R) -> Self {
+        Self {
+            responder: r,
+            sample_rate: 1.0,
+            freq_range: None,
+            n_points: 1024,
+            title: None,
+            size: None,
+            show_group_delay: false,
+        }
+    }
+
     pub fn sample_rate(mut self, fs: f64) -> Self {
         self.sample_rate = fs;
         self
@@ -261,6 +318,12 @@ impl<R: FrequencyResponse> BodePlot<R> {
             &phase_deg,
             group.as_deref(),
         ))
+    }
+
+    /// Render the plot to a temp SVG and open it in the system viewer
+    /// (Preview on macOS, default browser on Linux, etc.).
+    pub fn show(self) -> Result<(), PlotError> {
+        show_via_save("bode", |p| self.save(p))
     }
 }
 
@@ -342,20 +405,20 @@ pub struct MagnitudePlot<R> {
     log_x: bool,
 }
 
-/// Start a magnitude-only plot builder.
-pub fn magnitude<R: FrequencyResponse>(r: R) -> MagnitudePlot<R> {
-    MagnitudePlot {
-        responder: r,
-        sample_rate: 1.0,
-        freq_range: None,
-        n_points: 1024,
-        title: None,
-        size: (1600, 500),
-        log_x: true,
-    }
-}
-
 impl<R: FrequencyResponse> MagnitudePlot<R> {
+    /// Start a magnitude-only plot builder for `r`.
+    pub fn new(r: R) -> Self {
+        Self {
+            responder: r,
+            sample_rate: 1.0,
+            freq_range: None,
+            n_points: 1024,
+            title: None,
+            size: (1600, 500),
+            log_x: true,
+        }
+    }
+
     pub fn sample_rate(mut self, fs: f64) -> Self {
         self.sample_rate = fs;
         self
@@ -408,6 +471,11 @@ impl<R: FrequencyResponse> MagnitudePlot<R> {
             &freqs_axis,
             &mag_db,
         ))
+    }
+
+    /// Render to a temp SVG and open it in the system viewer.
+    pub fn show(self) -> Result<(), PlotError> {
+        show_via_save("magnitude", |p| self.save(p))
     }
 }
 
@@ -467,24 +535,21 @@ pub struct ImpulsePlot<'p, P> {
     size: (u32, u32),
 }
 
-/// Start an impulse-response plot for `p`. `p` is reset before
-/// sampling.
-pub fn impulse<P>(p: &mut P) -> ImpulsePlot<'_, P>
+impl<'p, P> ImpulsePlot<'p, P>
 where
     P: SampleProcessor<f64, Output = f64> + Reset,
 {
-    ImpulsePlot {
-        processor: p,
-        n: 64,
-        title: None,
-        size: (1600, 500),
+    /// Start an impulse-response plot for `p`. `p` is reset before
+    /// sampling.
+    pub fn new(p: &'p mut P) -> Self {
+        Self {
+            processor: p,
+            n: 64,
+            title: None,
+            size: (1600, 500),
+        }
     }
-}
 
-impl<P> ImpulsePlot<'_, P>
-where
-    P: SampleProcessor<f64, Output = f64> + Reset,
-{
     pub fn n(mut self, n: usize) -> Self {
         self.n = n;
         self
@@ -502,6 +567,11 @@ where
         let title = self.title.unwrap_or_else(|| "Impulse response".to_string());
         save_samples(path.as_ref(), self.size, &title, "n (samples)", "h[n]", &h, PRIMARY)
     }
+
+    /// Render to a temp SVG and open it in the system viewer.
+    pub fn show(self) -> Result<(), PlotError> {
+        show_via_save("impulse", |p| self.save(p))
+    }
 }
 
 /// Builder for a step-response plot.
@@ -513,23 +583,20 @@ pub struct StepPlot<'p, P> {
     size: (u32, u32),
 }
 
-/// Start a step-response plot for `p`. Resets `p` before sampling.
-pub fn step<P>(p: &mut P) -> StepPlot<'_, P>
+impl<'p, P> StepPlot<'p, P>
 where
     P: SampleProcessor<f64, Output = f64> + Reset,
 {
-    StepPlot {
-        processor: p,
-        n: 128,
-        title: None,
-        size: (1600, 500),
+    /// Start a step-response plot for `p`. Resets `p` before sampling.
+    pub fn new(p: &'p mut P) -> Self {
+        Self {
+            processor: p,
+            n: 128,
+            title: None,
+            size: (1600, 500),
+        }
     }
-}
 
-impl<P> StepPlot<'_, P>
-where
-    P: SampleProcessor<f64, Output = f64> + Reset,
-{
     pub fn n(mut self, n: usize) -> Self {
         self.n = n;
         self
@@ -546,6 +613,11 @@ where
         let s = step_response(self.processor, self.n);
         let title = self.title.unwrap_or_else(|| "Step response".to_string());
         save_samples(path.as_ref(), self.size, &title, "n (samples)", "y[n]", &s, SECONDARY)
+    }
+
+    /// Render to a temp SVG and open it in the system viewer.
+    pub fn show(self) -> Result<(), PlotError> {
+        show_via_save("step", |p| self.save(p))
     }
 }
 

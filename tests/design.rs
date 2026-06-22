@@ -8,7 +8,7 @@ use filterkit::design::{
     ExponentialAverageError, ExponentialAverageSpec, MovingAverageSpec, Window,
     WindowedSincLowpassSpec,
 };
-use filterkit::processors::{Biquad, Fir, OnePole};
+use filterkit::processors::{Biquad, Ema, Fir};
 use filterkit::SampleProcessor;
 
 #[test]
@@ -137,7 +137,7 @@ fn ema_from_cutoff_hz_gives_3db_attenuation_at_cutoff() {
     let fc = 1_000.0_f64;
     let spec = ExponentialAverageSpec::from_cutoff_hz(fc, fs).unwrap();
     let alpha: f64 = spec.design().unwrap();
-    let mut p = OnePole::new(alpha);
+    let mut p = Ema::new(alpha);
 
     let n_skip = 4096;
     let n_keep = 16384;

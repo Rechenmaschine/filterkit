@@ -1,38 +1,27 @@
 use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
-/// One-pole IIR / exponential moving average.
+/// Exponential moving average.
 ///
 /// Difference equation:
 ///
 /// ```text
-///     y[n] = α · x[n] + (1 - α) · y[n - 1]
+///     y[n] = alpha * x[n] + (1 - alpha) * y[n - 1]
 /// ```
 ///
-/// `α ∈ (0, 1]`. Smaller `α` ⇒ slower, smoother response. `α = 1`
-/// passes input through unchanged.
-///
-/// Construct directly with [`OnePole::new`] if you already have an
-/// `α`, or use [`crate::design::ExponentialAverageSpec`] when you'd
-/// rather think in terms of a time-constant or cutoff frequency.
-///
-/// # Note on parameterisation
-///
-/// Some references write `y[n] = (1 - α) · x[n] + α · y[n - 1]` (the
-/// "pole-domain" α). This crate uses the *response-domain* α — i.e.
-/// `α` is the weight on the *new* input sample. They are simply
-/// complements of each other.
+/// `alpha` is in `(0, 1]`. Smaller values give a slower response;
+/// `alpha = 1` passes input through unchanged.
 #[derive(Clone, Copy, Debug)]
-pub struct OnePole<T> {
-    /// Mix factor applied to the new input. Bigger α ⇒ less smoothing.
+pub struct Ema<T> {
+    /// Weight applied to the new input sample.
     pub alpha: T,
     y: T,
 }
 
-impl<T> OnePole<T>
+impl<T> Ema<T>
 where
     T: num_traits::Zero + Copy,
 {
-    /// Build a one-pole filter with zero initial state.
+    /// Build with zero initial state.
     pub fn new(alpha: T) -> Self {
         Self {
             alpha,
@@ -40,7 +29,7 @@ where
         }
     }
 
-    /// Build with a pre-loaded last-output value, for stitching blocks.
+    /// Build with a pre-loaded previous output value.
     pub fn with_state(alpha: T, last_output: T) -> Self {
         Self {
             alpha,
@@ -48,7 +37,7 @@ where
         }
     }
 
-    /// Current output (the `y[n-1]` that the next call will see).
+    /// Current previous-output state.
     pub fn last_output(&self) -> T
     where
         T: Copy,
@@ -57,7 +46,7 @@ where
     }
 }
 
-impl<T> Reset for OnePole<T>
+impl<T> Reset for Ema<T>
 where
     T: num_traits::Zero + Copy,
 {
@@ -66,16 +55,13 @@ where
     }
 }
 
-impl<T> Retune<T> for OnePole<T> {
-    /// Replace `α` without disturbing state. State carryover is the
-    /// usual choice for one-poles since changing `α` is a smooth
-    /// modulation gesture.
+impl<T> Retune<T> for Ema<T> {
     fn retune(&mut self, alpha: T) {
         self.alpha = alpha;
     }
 }
 
-impl<T> SampleProcessor<T> for OnePole<T>
+impl<T> SampleProcessor<T> for Ema<T>
 where
     T: Copy
         + num_traits::One
@@ -93,7 +79,7 @@ where
     }
 }
 
-impl<T> SteadyState<T> for OnePole<T>
+impl<T> SteadyState<T> for Ema<T>
 where
     T: Copy
         + num_traits::One
@@ -107,7 +93,7 @@ where
     }
 }
 
-impl<T> FiltFiltKernel<T> for OnePole<T>
+impl<T> FiltFiltKernel<T> for Ema<T>
 where
     T: Copy
         + num_traits::One

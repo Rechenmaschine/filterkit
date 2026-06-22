@@ -7,18 +7,20 @@
 mod biquad;
 mod delay;
 mod direct_form;
+mod ema;
 mod fir;
+mod first_order;
 mod gain;
-mod one_pole;
 mod sos;
 mod state_space;
 
 pub use biquad::{Biquad, BiquadState};
 pub use delay::Delay;
 pub use direct_form::DirectFormI;
+pub use ema::Ema;
 pub use fir::{Fir, FirState};
+pub use first_order::{FirstOrder, FirstOrderCoeffs};
 pub use gain::Gain;
-pub use one_pole::OnePole;
 pub use sos::SosCascade;
 pub use state_space::StateSpaceProcessor;
 

@@ -1,4 +1,4 @@
-//! Smooth a noisy ramp with a one-pole EMA, configured three ways:
+//! Smooth a noisy ramp with an EMA, configured three ways:
 //! direct α, time constant, and cutoff frequency.
 //!
 //! Run with: `cargo run --example ema_smoothing`
@@ -9,7 +9,7 @@ use filterkit::SampleProcessor;
 fn main() {
     let fs = 1_000.0_f64; // 1 kHz
 
-    // Three equivalent ways to spec a one-pole at roughly the same
+    // Three equivalent ways to spec an EMA at roughly the same
     // smoothing strength.
     let a_alpha = ExponentialAverageSpec::from_alpha(0.05).unwrap();
     let a_tau = ExponentialAverageSpec::from_time_constant(0.02, fs).unwrap();
@@ -19,7 +19,7 @@ fn main() {
     println!("alpha (tau = 20 ms)   = {:.4}", a_tau.alpha());
     println!("alpha (fc = 8 Hz)     = {:.4}", a_fc.alpha());
 
-    // `build()` returns a ready-to-run OnePole<T> directly. Use
+    // `build()` returns a ready-to-run Ema<T> directly. Use
     // `design()` instead if you want just the α as a coefficient.
     let mut p_alpha = a_alpha.build::<f64>().unwrap();
     let mut p_tau = a_tau.build::<f64>().unwrap();

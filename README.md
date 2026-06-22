@@ -73,7 +73,7 @@ Each `cargo run --example <name>` is self-contained:
 
 - `biquad_lowpass` — single biquad on a sum-of-sines test signal
 - `fir_moving_average` — 5-tap MA, designed and run
-- `ema_smoothing` — one-pole EMA, three equivalent parameterisations
+- `ema_smoothing` — EMA, three equivalent parameterisations
 - `combinator_chain` — HP → LP → gain, RMS swept across the audio band
 - `lms_noise_cancel` — adaptive cancellation; converges to plant taps
 - `polyphase_resample` — 48 kHz → 44.1 kHz with a windowed-sinc prototype
@@ -84,9 +84,9 @@ Each `cargo run --example <name>` is self-contained:
 What's in:
 - `Reset`, `Prepare`, `Retune`, `Design` traits.
 - All five execution traits + extension methods for `SampleProcessor`.
-- Concrete processors: `Gain`, `Delay`, `OnePole` (EMA / one-pole IIR),
-  `Fir`, `Biquad`, `SosCascade`, `DirectFormI`, `StateSpaceProcessor`,
-  plus heap-backed `FirDyn` and `SosDyn`.
+- Concrete processors: `Gain`, `Delay`, `Ema`, `FirstOrder`, `Fir`,
+  `Biquad`, `SosCascade`, `DirectFormI`, `StateSpaceProcessor`, plus
+  heap-backed `FirDyn` and `SosDyn`.
 - Stream: const-sized `Decimator`, `Interpolator`, and heap-backed
   `PolyphaseResampler`.
 - Whole-signal: `ForwardBackward` zero-phase filtering with SciPy-style

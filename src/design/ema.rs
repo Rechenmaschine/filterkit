@@ -1,9 +1,9 @@
 //! Exponential moving average design.
 //!
 //! All three constructors produce a single response-domain `α` in
-//! `(0, 1]` suitable for [`crate::processors::OnePole`].
+//! `(0, 1]` suitable for [`crate::processors::Ema`].
 
-/// Spec for a one-pole / exponential-moving-average filter.
+/// Spec for an exponential moving average.
 ///
 /// Construct via [`Self::from_alpha`], [`Self::from_time_constant`], or
 /// [`Self::from_cutoff_hz`]; then call [`Self::design`] to produce the
@@ -58,7 +58,7 @@ impl ExponentialAverageSpec {
     ///
     /// Uses the impulse-invariant mapping
     /// `α = 1 - e^(-2π f_c / fs)`. This matches what most audio code
-    /// expects when you say "one-pole lowpass at X Hz".
+    /// expects when you say "EMA lowpass at X Hz".
     pub fn from_cutoff_hz(
         cutoff_hz: f64,
         sample_rate: f64,
@@ -95,15 +95,15 @@ impl ExponentialAverageSpec {
     }
 
     /// One-step path: materialise this spec straight into a
-    /// [`OnePole`] processor with zero initial state.
+    /// [`Ema`] processor with zero initial state.
     ///
-    /// Equivalent to `OnePole::new(spec.design()?)`, just shorter.
+    /// Equivalent to `Ema::new(spec.design()?)`, just shorter.
     ///
-    /// [`OnePole`]: crate::processors::OnePole
-    pub fn build<T>(&self) -> Result<crate::processors::OnePole<T>, ExponentialAverageError>
+    /// [`Ema`]: crate::processors::Ema
+    pub fn build<T>(&self) -> Result<crate::processors::Ema<T>, ExponentialAverageError>
     where
         T: Copy + num_traits::Zero + num_traits::FromPrimitive,
     {
-        Ok(crate::processors::OnePole::new(self.design::<T>()?))
+        Ok(crate::processors::Ema::new(self.design::<T>()?))
     }
 }

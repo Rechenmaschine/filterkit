@@ -5,11 +5,12 @@
 //! Run with: `cargo run -p filterkit-plot --example biquad_bode`
 //!
 //! Writes `biquad_bode.png`, `biquad_impulse.png`, `biquad_step.png`
-//! into the workspace root.
+//! into the workspace root. To open the same plots in your system
+//! viewer instead, swap `.save("…")` for `.show()`.
 
 use filterkit::design::BiquadLowpassSpec;
 use filterkit::processors::Biquad;
-use filterkit_plot::{bode, impulse, step};
+use filterkit_plot::{BodePlot, ImpulsePlot, StepPlot};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fs = 48_000.0_f64;
@@ -17,22 +18,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .design()
         .expect("biquad design");
 
-    bode(coeffs)
+    BodePlot::new(coeffs)
         .sample_rate(fs)
         .title("2 kHz biquad lowpass (Q = 0.707)")
         .with_group_delay(true)
-        .save("biquad_bode.svg")?;
+        .show()?;
+        //.save("biquad_bode.png")?;
 
     let mut filter = Biquad::new(coeffs);
-    impulse(&mut filter)
-        .n(1000)
+    ImpulsePlot::new(&mut filter)
+        .n(96)
         .title("Biquad lowpass impulse response")
-        .save("biquad_impulse.svg")?;
+        .save("biquad_impulse.png")?;
 
-    step(&mut filter)
-        .n(1000)
+    StepPlot::new(&mut filter)
+        .n(192)
         .title("Biquad lowpass step response")
-        .save("biquad_step.svg")?;
+        .save("biquad_step.png")?;
 
     println!("wrote biquad_bode.png, biquad_impulse.png, biquad_step.png");
     Ok(())

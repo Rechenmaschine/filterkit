@@ -29,8 +29,8 @@ pub trait WholeSignalProcessor<I> {
 ///
 /// After `reset_to_steady_input(x)`, the processor should behave as if it
 /// had already processed an indefinitely long run of samples equal to
-/// `x`. For example, a one-pole smoother should preload its previous
-/// output to `x`, and an FIR should preload each delay slot to `x`.
+/// `x`. For example, an EMA should preload its previous output to `x`,
+/// and an FIR should preload each delay slot to `x`.
 ///
 /// This is different from [`Reset`], which clears state to the
 /// processor's zero-input initial condition.
