@@ -16,10 +16,14 @@ default = ["std", "design"]
 std = ["alloc", "num-traits/std"]
 alloc = []
 design = ["dep:libm"]
+# State estimators (Kalman, RTS, …). Pulls in nalgebra for matrix
+# algebra; kept out of the default set so the core stays zero-dep.
+kalman = ["dep:nalgebra"]
 
 [dependencies]
 num-traits = { version = "0.2", default-features = false }
 libm = { version = "0.2", optional = true }
+nalgebra = { version = "0.33", default-features = false, features = ["libm"], optional = true }
 
 [dev-dependencies]
 approx = "0.5"
@@ -28,3 +32,7 @@ criterion = { version = "0.5", default-features = false, features = ["cargo_benc
 [[bench]]
 name = "throughput"
 harness = false
+
+[[example]]
+name = "kalman_tracking"
+required-features = ["kalman"]

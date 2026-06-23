@@ -66,6 +66,9 @@ pub mod stream;
 pub mod whole;
 pub mod adaptive;
 
+#[cfg(feature = "kalman")]
+pub mod estimators;
+
 #[cfg(feature = "design")]
 pub mod design;
 
@@ -86,3 +89,6 @@ pub use processors::{
 };
 
 pub use combinators::{Bypass, Chain, Map, Parallel, Sum, Tap, WetDry};
+
+#[cfg(feature = "kalman")]
+pub use estimators::{GaussianEstimate, KalmanFilter, KalmanModel};

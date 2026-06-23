@@ -35,6 +35,7 @@ processing rather than by filter family:
 | `std`     | yes     | Standard library; implies `alloc`.                                    |
 | `alloc`   | yes\*   | `Vec`-backed dynamic processors (`FirDyn`, `SosDyn`, resampler, LMS). |
 | `design`  | yes     | Designers: RBJ biquads, windowed-sinc FIR, moving average.            |
+| `kalman`  | no      | State estimators (`KalmanFilter`, RTS to come). Pulls in `nalgebra`.  |
 
 `*` `alloc` is on by default because `std` implies it. With
 `default-features = false` you get a pure `no_std`, no-alloc core
@@ -78,6 +79,8 @@ Each `cargo run --example <name>` is self-contained:
 - `lms_noise_cancel` — adaptive cancellation; converges to plant taps
 - `polyphase_resample` — 48 kHz → 44.1 kHz with a windowed-sinc prototype
 - `zero_phase_filtfilt` — compare causal vs forward/backward output
+- `kalman_tracking` — constant-velocity tracker; beats raw measurements
+  (needs `--features kalman`)
 
 ## Scope of 0.1
 
@@ -92,6 +95,8 @@ What's in:
 - Whole-signal: `ForwardBackward` zero-phase filtering with SciPy-style
   padding and steady-state pass initialisation.
 - Adaptive: `Lms`, `Nlms`.
+- Estimators (`kalman` feature): linear `KalmanFilter` over an `N`-state,
+  `M`-measurement Gaussian model, returning a `GaussianEstimate`.
 - Design: RBJ biquads (LP/HP/BP/notch), windowed-sinc FIR, moving
   average, exponential moving average (direct α / time constant /
   cutoff Hz); plus `magnitude_at` / `phase_at` for verification.
@@ -105,6 +110,8 @@ What's deliberately out (planned for ≥0.2):
 - Multi-channel processors.
 - Gustafsson initial-condition method for `filtfilt`.
 - RLS adaptive.
+- Estimators: RTS smoother (`WholeSignalProcessor`), extended/unscented
+  Kalman, and a control-input term.
 
 ## License
 
