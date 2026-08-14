@@ -34,5 +34,33 @@ name = "throughput"
 harness = false
 
 [[example]]
+name = "biquad_lowpass"
+required-features = ["design"]
+
+[[example]]
+name = "combinator_chain"
+required-features = ["design"]
+
+[[example]]
+name = "ema_smoothing"
+required-features = ["design"]
+
+[[example]]
+name = "fir_moving_average"
+required-features = ["design"]
+
+[[example]]
 name = "kalman_tracking"
 required-features = ["kalman"]
+
+[[example]]
+name = "lms_noise_cancel"
+required-features = ["alloc"]
+
+[[example]]
+name = "polyphase_resample"
+required-features = ["alloc", "design"]
+
+[[example]]
+name = "zero_phase_filtfilt"
+required-features = ["alloc", "design"]
