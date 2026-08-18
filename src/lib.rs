@@ -58,13 +58,13 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-pub mod traits;
-pub mod coeffs;
-pub mod processors;
-pub mod combinators;
-pub mod stream;
-pub mod whole;
 pub mod adaptive;
+pub mod coeffs;
+pub mod combinators;
+pub mod processors;
+pub mod stream;
+pub mod traits;
+pub mod whole;
 
 #[cfg(feature = "kalman")]
 pub mod estimators;
@@ -78,7 +78,7 @@ pub mod response;
 // Re-export the core surface for ergonomic use.
 pub use traits::{
     AdaptiveProcessor, BlockProcessor, Design, Prepare, ProcessSpec, ProcessorExt, Reset, Retune,
-    SampleFilter, SampleProcessor, StreamProcessor, StreamStatus, WholeSignalProcessor,
+    SampleProcessor, StreamProcessor, StreamStatus, WholeSignalProcessor,
 };
 
 pub use coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, StateSpace, TransferFunction};

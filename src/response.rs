@@ -1,7 +1,7 @@
 //! Vector-producing response helpers for analysis and plotting.
 //!
 //! The per-frequency primitives live on each coefficient type in
-//! [`crate::design::freq_response`]. This module wraps them with:
+//! `crate::design::freq_response`. This module wraps them with:
 //!
 //! - a [`FrequencyResponse`] trait so downstream code can be generic
 //!   over the various coefficient types,

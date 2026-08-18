@@ -50,10 +50,6 @@ impl<T: Default + Copy, S: Copy> Prepare<S> for FirDyn<T> {
     type Error = FirDynPrepareError;
 
     fn prepare(&mut self, spec: ProcessSpec<S>) -> Result<(), Self::Error> {
-        // FirDyn can absorb blocks of any length: it processes
-        // sample-by-sample internally and the only per-block buffer it
-        // could allocate is `Vec<Output>` which the caller supplies.
-        // We just reset state to give a clean stream.
         let _ = spec;
         self.reset();
         Ok(())
@@ -70,10 +66,7 @@ impl<T: Default + Copy> Reset for FirDyn<T> {
 }
 
 impl<T: Default + Copy> Retune<Vec<T>> for FirDyn<T> {
-    /// Replace the active taps. Always resets the delay line so a
-    /// retune cannot leak history from the previous filter into the
-    /// new one — same-length-different-coeffs retunes used to keep
-    /// state silently, which was foot-gunny.
+    /// Replace the active taps and clear the delay line.
     fn retune(&mut self, coeffs: Vec<T>) {
         let len = coeffs.len();
         self.b = coeffs.into_boxed_slice();

@@ -7,10 +7,6 @@ use crate::traits::{Reset, StreamProcessor, StreamStatus};
 /// caller should be an `L`-times-upsampled lowpass with passband at
 /// `fs / 2L`.
 ///
-/// The implementation is a straightforward direct form — for serious
-/// work prefer a polyphase decomposition (see [`PolyphaseResampler`]).
-///
-/// [`PolyphaseResampler`]: super::PolyphaseResampler
 #[derive(Debug)]
 pub struct Interpolator<'taps, T, const N: usize> {
     /// FIR taps applied after zero stuffing.
@@ -61,11 +57,7 @@ where
 
 impl<'taps, T, const N: usize> StreamProcessor<T> for Interpolator<'taps, T, N>
 where
-    T: Copy
-        + Default
-        + num_traits::Zero
-        + core::ops::Mul<Output = T>
-        + core::ops::Add<Output = T>,
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
 {
     type Output = T;
 
@@ -137,11 +129,7 @@ where
 
 impl<'taps, T, const N: usize> Interpolator<'taps, T, N>
 where
-    T: Copy
-        + Default
-        + num_traits::Zero
-        + core::ops::Mul<Output = T>
-        + core::ops::Add<Output = T>,
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
 {
     /// FIR dot product at the current head position.
     fn compute_phase(&self) -> T {

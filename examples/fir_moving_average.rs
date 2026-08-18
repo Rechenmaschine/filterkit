@@ -3,7 +3,7 @@
 //! Run with: `cargo run --example fir_moving_average`
 
 use filterkit::design::MovingAverageSpec;
-use filterkit::{SampleFilter, SampleProcessor};
+use filterkit::SampleProcessor;
 
 fn main() {
     // 5-tap MA via the design layer. `.build()` hands back a
@@ -27,9 +27,7 @@ fn main() {
     let mut ys = vec![0.0; xs.len()];
     fir.process_into(&xs, &mut ys);
 
-    // In-place: SampleFilter is blanket-implemented for any
-    // SampleProcessor whose input and output share a type, so
-    // .process_in_place is available for free.
+    // In-place processing uses the same processor state.
     let mut fir2 = MovingAverageSpec
         .build::<f32, 5>()
         .expect("moving average build");

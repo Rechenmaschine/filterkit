@@ -1,8 +1,5 @@
 //! Combinators for composing [`SampleProcessor`]s.
 //!
-//! These are deliberately small and orthogonal. Most can be reached
-//! fluently via [`ProcessorExt`].
-//!
 //! [`SampleProcessor`]: crate::traits::SampleProcessor
 //! [`ProcessorExt`]: crate::traits::ProcessorExt
 

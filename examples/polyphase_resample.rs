@@ -8,15 +8,12 @@ use filterkit::StreamProcessor;
 
 fn main() {
     // 48 kHz -> 44.1 kHz: ratio = 147 / 160 in lowest terms.
-    // For demo purposes use the smaller ratio 147 / 160 with a single
-    // windowed-sinc prototype.
     let up = 147_usize;
     let down = 160_usize;
 
     // Combined rate: design lowpass at min(fs_in, fs_out)/2 in the
     // up-sampled domain.
     let cutoff = 0.5 / (up.max(down) as f64);
-    // Long-ish prototype to keep aliasing low.
     let proto = WindowedSincLowpassSpec {
         cutoff,
         window: Window::Blackman,

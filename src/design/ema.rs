@@ -46,7 +46,7 @@ impl ExponentialAverageSpec {
         tau_seconds: f64,
         sample_rate: f64,
     ) -> Result<Self, ExponentialAverageError> {
-        if !(tau_seconds > 0.0) || !(sample_rate > 0.0) {
+        if tau_seconds <= 0.0 || sample_rate <= 0.0 {
             return Err(ExponentialAverageError::InvalidParameter);
         }
         let alpha = 1.0 - libm::exp(-1.0 / (tau_seconds * sample_rate));
@@ -63,7 +63,7 @@ impl ExponentialAverageSpec {
         cutoff_hz: f64,
         sample_rate: f64,
     ) -> Result<Self, ExponentialAverageError> {
-        if !(cutoff_hz > 0.0) || !(sample_rate > 0.0) {
+        if cutoff_hz <= 0.0 || sample_rate <= 0.0 {
             return Err(ExponentialAverageError::InvalidParameter);
         }
         if cutoff_hz >= sample_rate / 2.0 {

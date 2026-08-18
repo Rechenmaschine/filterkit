@@ -58,7 +58,7 @@ pub trait SampleProcessor<I>: Reset {
     /// Process samples in-place. Available only when `Self::Output = I`
     /// (read-modify-write requires the produced sample to fit back in
     /// the slot it came from). Default implementation calls
-    /// [`process_sample`] over each element; concrete kernels are free
+    /// [`SampleProcessor::process_sample`] over each element; concrete kernels are free
     /// to override with a faster loop.
     fn process_in_place(&mut self, buffer: &mut [I])
     where
@@ -70,13 +70,3 @@ pub trait SampleProcessor<I>: Reset {
         }
     }
 }
-
-/// Backwards-compatible alias: any `SampleProcessor<T, Output = T>`
-/// supports [`SampleProcessor::process_in_place`] directly. Kept as a
-/// named trait so users can write `where F: SampleFilter<T>` as a
-/// readable bound instead of the longer associated-type form. No
-/// methods of its own — everything lives on [`SampleProcessor`] so
-/// it can be overridden.
-pub trait SampleFilter<T>: SampleProcessor<T, Output = T> {}
-
-impl<T, F> SampleFilter<T> for F where F: SampleProcessor<T, Output = T> {}

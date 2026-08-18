@@ -3,18 +3,9 @@ use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState}
 
 /// Direct-form I IIR realisation of a [`TransferFunction`].
 ///
-/// Holds `NB` past inputs and `NA` past outputs. Numerically less
-/// forgiving than DF2T at high order — for serious IIRs prefer
-/// [`crate::processors::SosCascade`] — but useful for low-order designs
-/// and as a reference implementation.
-///
-/// # Design note
-///
-/// `DirectFormIITransposed` for arbitrary `(NB, NA)` orders is *not*
-/// exposed in 0.1: it would require carrying a separate const generic
-/// `NS = max(NB, NA + 1) - 1`, which stable Rust can't derive. Second-
-/// order DF2T is available via [`crate::processors::Biquad`] and
-/// [`crate::processors::SosCascade`].
+/// Holds `NB` past inputs and `NA` past outputs. It is intended for
+/// low-order designs; higher-order IIR filters are usually more stable
+/// when represented as a cascade of second-order sections.
 #[derive(Clone, Copy, Debug)]
 pub struct DirectFormI<T, const NB: usize, const NA: usize> {
     /// Active transfer function.

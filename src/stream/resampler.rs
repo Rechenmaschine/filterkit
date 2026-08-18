@@ -149,11 +149,7 @@ where
 #[cfg(feature = "alloc")]
 impl<T> StreamProcessor<T> for PolyphaseResampler<T>
 where
-    T: Copy
-        + Default
-        + num_traits::Zero
-        + core::ops::Mul<Output = T>
-        + core::ops::Add<Output = T>,
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
 {
     type Output = T;
 
@@ -168,9 +164,6 @@ where
         // Drain pending phases that don't need a new input.
         while produced < output.len() && self.phase >= self.up {
             self.phase -= self.up;
-            // No new input — just advance phase; conceptually a no-op output
-            // is impossible here because phase < up after subtraction, so
-            // emit.
             output[produced] = self.eval(self.phase);
             produced += 1;
             self.phase += self.down;
@@ -215,11 +208,7 @@ where
 #[cfg(feature = "alloc")]
 impl<T> PolyphaseResampler<T>
 where
-    T: Copy
-        + Default
-        + num_traits::Zero
-        + core::ops::Mul<Output = T>
-        + core::ops::Add<Output = T>,
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
 {
     /// Dot the input delay line against polyphase row `phase`.
     fn eval(&self, phase: usize) -> T {

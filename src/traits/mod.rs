@@ -23,7 +23,7 @@ mod whole;
 pub use block::BlockProcessor;
 pub use ext::ProcessorExt;
 pub use prepare::{Prepare, ProcessSpec};
-pub use sample::{SampleFilter, SampleProcessor};
+pub use sample::SampleProcessor;
 pub use stream::{StreamProcessor, StreamStatus};
 pub use whole::{FiltFiltKernel, SteadyState, WholeSignalProcessor};
 
@@ -66,8 +66,6 @@ pub trait Design {
 ///
 /// Adaptive processors differ from LTI [`SampleProcessor`]s in that
 /// `adapt` is called with a *desired* sample to update internal weights.
-/// They are intentionally a separate trait — most code shouldn't have to
-/// reason about adaptation when it doesn't apply.
 pub trait AdaptiveProcessor<I>: Reset {
     /// The sample type produced by the filter.
     type Output;
