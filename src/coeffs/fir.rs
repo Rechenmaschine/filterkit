@@ -31,7 +31,9 @@ impl<T, const N: usize> FirCoeffs<T, N> {
 
 impl<T: Default + Copy, const N: usize> Default for FirCoeffs<T, N> {
     fn default() -> Self {
-        Self { b: [T::default(); N] }
+        Self {
+            b: [T::default(); N],
+        }
     }
 }
 

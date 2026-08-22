@@ -42,11 +42,7 @@ impl<T, const N: usize> Retune<StateSpace<T, N>> for StateSpaceProcessor<T, N> {
 
 impl<T, const N: usize> SampleProcessor<T> for StateSpaceProcessor<T, N>
 where
-    T: Copy
-        + Default
-        + num_traits::Zero
-        + core::ops::Mul<Output = T>
-        + core::ops::Add<Output = T>,
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
 {
     type Output = T;
 

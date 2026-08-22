@@ -69,11 +69,7 @@ where
 
 impl<'taps, T, const N: usize> StreamProcessor<T> for Decimator<'taps, T, N>
 where
-    T: Copy
-        + Default
-        + num_traits::Zero
-        + core::ops::Mul<Output = T>
-        + core::ops::Add<Output = T>,
+    T: Copy + Default + num_traits::Zero + core::ops::Mul<Output = T> + core::ops::Add<Output = T>,
 {
     type Output = T;
 

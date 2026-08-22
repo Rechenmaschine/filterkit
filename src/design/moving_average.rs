@@ -33,7 +33,9 @@ impl MovingAverageSpec {
     }
 
     /// One-step path: design and wrap in a [`Fir`](crate::processors::Fir).
-    pub fn build<T, const N: usize>(self) -> Result<crate::processors::Fir<T, N>, MovingAverageError>
+    pub fn build<T, const N: usize>(
+        self,
+    ) -> Result<crate::processors::Fir<T, N>, MovingAverageError>
     where
         T: Copy
             + Default

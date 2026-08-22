@@ -15,7 +15,9 @@ pub struct Map<F, Fun> {
 
 impl<F: fmt::Debug, Fun> fmt::Debug for Map<F, Fun> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Map").field("inner", &self.inner).finish_non_exhaustive()
+        f.debug_struct("Map")
+            .field("inner", &self.inner)
+            .finish_non_exhaustive()
     }
 }
 

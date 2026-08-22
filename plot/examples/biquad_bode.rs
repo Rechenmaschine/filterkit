@@ -14,16 +14,19 @@ use filterkit_plot::{BodePlot, ImpulsePlot, StepPlot};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fs = 48_000.0_f64;
-    let coeffs = BiquadLowpassSpec { f0: 2_000.0 / fs, q: 0.707 }
-        .design()
-        .expect("biquad design");
+    let coeffs = BiquadLowpassSpec {
+        f0: 2_000.0 / fs,
+        q: 0.707,
+    }
+    .design()
+    .expect("biquad design");
 
     BodePlot::new(coeffs)
         .sample_rate(fs)
         .title("2 kHz biquad lowpass (Q = 0.707)")
         .with_group_delay(true)
         .show()?;
-        //.save("biquad_bode.png")?;
+    //.save("biquad_bode.png")?;
 
     let mut filter = Biquad::new(coeffs);
     ImpulsePlot::new(&mut filter)

@@ -90,11 +90,7 @@ where
     T: RealField + Copy,
 {
     /// Build from a model and an explicit prior `(mean, cov)`.
-    pub fn new(
-        model: KalmanModel<T, N, M>,
-        mean: SVector<T, N>,
-        cov: SMatrix<T, N, N>,
-    ) -> Self {
+    pub fn new(model: KalmanModel<T, N, M>, mean: SVector<T, N>, cov: SMatrix<T, N, N>) -> Self {
         Self { model, mean, cov }
     }
 

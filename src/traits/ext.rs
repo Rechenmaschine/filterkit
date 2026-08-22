@@ -1,5 +1,5 @@
-use crate::combinators::{Bypass, Chain, Map, Parallel, Sum, Tap, WetDry};
 use super::SampleProcessor;
+use crate::combinators::{Bypass, Chain, Map, Parallel, Sum, Tap, WetDry};
 
 /// Extension methods for fluently composing [`SampleProcessor`]s.
 ///

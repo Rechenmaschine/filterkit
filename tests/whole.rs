@@ -50,6 +50,7 @@ fn forward_backward_zero_phase_lowpass() {
 
 #[test]
 #[cfg(feature = "design")]
+#[allow(clippy::excessive_precision)]
 fn forward_backward_matches_scipy_pad_method_for_biquad() {
     use filterkit::design::BiquadLowpassSpec;
 

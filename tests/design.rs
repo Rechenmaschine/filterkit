@@ -166,4 +166,3 @@ fn ema_rejects_cutoff_above_nyquist() {
     assert!(ExponentialAverageSpec::from_cutoff_hz(25_000.0, 48_000.0).is_err());
     assert!(ExponentialAverageSpec::from_cutoff_hz(-100.0, 48_000.0).is_err());
 }
-

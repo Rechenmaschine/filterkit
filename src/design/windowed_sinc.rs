@@ -37,7 +37,9 @@ pub enum WindowedSincError {
 
 impl WindowedSincLowpassSpec {
     /// One-step path: design and wrap in a [`Fir`](crate::processors::Fir).
-    pub fn build<const N: usize>(&self) -> Result<crate::processors::Fir<f64, N>, WindowedSincError> {
+    pub fn build<const N: usize>(
+        &self,
+    ) -> Result<crate::processors::Fir<f64, N>, WindowedSincError> {
         Ok(crate::processors::Fir::new(self.design::<N>()?))
     }
 
@@ -93,8 +95,6 @@ fn window_value(window: Window, k: usize, n: usize) -> f64 {
         Window::Rectangular => 1.0,
         Window::Hann => 0.5 - 0.5 * libm::cos(two_pi_kn),
         Window::Hamming => 0.54 - 0.46 * libm::cos(two_pi_kn),
-        Window::Blackman => {
-            0.42 - 0.5 * libm::cos(two_pi_kn) + 0.08 * libm::cos(2.0 * two_pi_kn)
-        }
+        Window::Blackman => 0.42 - 0.5 * libm::cos(two_pi_kn) + 0.08 * libm::cos(2.0 * two_pi_kn),
     }
 }

@@ -55,9 +55,8 @@ fn fir_moving_average_magnitude_matches_closed_form() {
     // Closed-form: |H(f)| = |sin(π N f) / (N sin(π f))| for f != 0.
     let n = 5.0_f64;
     for &f in &[0.05_f64, 0.1, 0.2, 0.3] {
-        let expected = ((core::f64::consts::PI * n * f).sin()
-            / (n * (core::f64::consts::PI * f).sin()))
-        .abs();
+        let expected =
+            ((core::f64::consts::PI * n * f).sin() / (n * (core::f64::consts::PI * f).sin())).abs();
         let got = c.magnitude_at(f);
         assert_relative_eq!(got, expected, max_relative = 1e-10);
     }
@@ -76,11 +75,11 @@ fn fir_impulse_response_matches_taps() {
     let mut fir = Fir::new(c);
     let mut response = [0.0_f64; 33];
     response[0] = fir.process_sample(1.0);
-    for i in 1..33 {
-        response[i] = fir.process_sample(0.0);
+    for sample in response.iter_mut().skip(1) {
+        *sample = fir.process_sample(0.0);
     }
-    for k in 0..33 {
-        assert_relative_eq!(response[k], c.b[k], epsilon = 1e-12);
+    for (&got, &expected) in response.iter().zip(c.b.iter()) {
+        assert_relative_eq!(got, expected, epsilon = 1e-12);
     }
 }
 
@@ -133,9 +132,9 @@ fn fir_with_history_matches_continuation_of_block() {
 
     // Build history snapshot from signal[..split].
     let mut history = [0.0_f64; 16];
-    for k in 0..16 {
+    for (k, sample) in history.iter_mut().enumerate() {
         let idx = split as isize - 1 - k as isize;
-        history[k] = if idx >= 0 { signal[idx as usize] } else { 0.0 };
+        *sample = if idx >= 0 { signal[idx as usize] } else { 0.0 };
     }
     let mut b = Fir::with_history(c, history);
     for n in split..signal.len() {

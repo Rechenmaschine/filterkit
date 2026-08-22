@@ -110,7 +110,10 @@ impl std::fmt::Display for PlotError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnknownExtension(ext) => {
-                write!(f, "unknown plot file extension '{ext}' (expected png or svg)")
+                write!(
+                    f,
+                    "unknown plot file extension '{ext}' (expected png or svg)"
+                )
             }
             Self::Drawing(e) => write!(f, "plot drawing error: {e}"),
             Self::Open(cmd, e) => write!(f, "failed to launch viewer ('{cmd}'): {e}"),
@@ -302,10 +305,16 @@ impl<R: FrequencyResponse> BodePlot<R> {
             None
         };
         let title = self.title.unwrap_or_else(|| "Bode plot".to_string());
-        let size = self
-            .size
-            .unwrap_or(if self.show_group_delay { (1600, 1200) } else { (1600, 900) });
-        let x_desc = if fs == 1.0 { "f (cycles/sample)" } else { "f (Hz)" };
+        let size = self.size.unwrap_or(if self.show_group_delay {
+            (1600, 1200)
+        } else {
+            (1600, 900)
+        });
+        let x_desc = if fs == 1.0 {
+            "f (cycles/sample)"
+        } else {
+            "f (Hz)"
+        };
 
         with_render_dispatch!(path, size, |root| draw_bode(
             root,
@@ -459,7 +468,11 @@ impl<R: FrequencyResponse> MagnitudePlot<R> {
         let title = self.title.unwrap_or_else(|| "Magnitude".to_string());
         let size = self.size;
         let log_x = self.log_x;
-        let x_desc = if fs == 1.0 { "f (cycles/sample)" } else { "f (Hz)" };
+        let x_desc = if fs == 1.0 {
+            "f (cycles/sample)"
+        } else {
+            "f (Hz)"
+        };
 
         with_render_dispatch!(path, size, |root| draw_magnitude(
             root,
@@ -565,7 +578,15 @@ where
     pub fn save(self, path: impl AsRef<Path>) -> Result<(), PlotError> {
         let h = impulse_response(self.processor, self.n);
         let title = self.title.unwrap_or_else(|| "Impulse response".to_string());
-        save_samples(path.as_ref(), self.size, &title, "n (samples)", "h[n]", &h, PRIMARY)
+        save_samples(
+            path.as_ref(),
+            self.size,
+            &title,
+            "n (samples)",
+            "h[n]",
+            &h,
+            PRIMARY,
+        )
     }
 
     /// Render to a temp SVG and open it in the system viewer.
@@ -612,7 +633,15 @@ where
     pub fn save(self, path: impl AsRef<Path>) -> Result<(), PlotError> {
         let s = step_response(self.processor, self.n);
         let title = self.title.unwrap_or_else(|| "Step response".to_string());
-        save_samples(path.as_ref(), self.size, &title, "n (samples)", "y[n]", &s, SECONDARY)
+        save_samples(
+            path.as_ref(),
+            self.size,
+            &title,
+            "n (samples)",
+            "y[n]",
+            &s,
+            SECONDARY,
+        )
     }
 
     /// Render to a temp SVG and open it in the system viewer.
@@ -635,12 +664,7 @@ fn save_samples(
     let y_desc = y_desc.to_string();
     let samples = samples.to_vec();
     with_render_dispatch!(path, size, |root| draw_samples(
-        root,
-        &title,
-        &x_desc,
-        &y_desc,
-        &samples,
-        color,
+        root, &title, &x_desc, &y_desc, &samples, color,
     ))
 }
 

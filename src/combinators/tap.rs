@@ -15,7 +15,9 @@ pub struct Tap<F, Fun> {
 
 impl<F: fmt::Debug, Fun> fmt::Debug for Tap<F, Fun> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Tap").field("inner", &self.inner).finish_non_exhaustive()
+        f.debug_struct("Tap")
+            .field("inner", &self.inner)
+            .finish_non_exhaustive()
     }
 }
 
