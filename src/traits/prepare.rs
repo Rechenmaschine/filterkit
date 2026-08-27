@@ -21,12 +21,8 @@ impl<T> ProcessSpec<T> {
     }
 }
 
-/// Optional pre-run setup hook for processors that need to allocate or
-/// validate against host parameters.
-///
-/// Pure no_std processors typically do not implement this — they are
-/// fully configured by their representations. Allocating processors,
-/// resamplers, and FFT-based blocks usually do.
+/// Optional setup hook for processors that allocate or validate against
+/// host parameters.
 pub trait Prepare<T> {
     /// Error returned when the spec is unworkable (e.g. block too large).
     type Error;

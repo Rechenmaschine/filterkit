@@ -8,13 +8,11 @@ use filterkit::processors::Biquad;
 use filterkit::SampleProcessor;
 
 fn main() {
-    // 1 kHz signal hidden in 10 kHz noise, sampled at 48 kHz.
     let fs = 48_000.0_f64;
     let f_signal = 1_000.0;
     let f_noise = 10_000.0;
     let n = 256;
 
-    // Design a 2nd-order lowpass at 2 kHz with Butterworth Q ~ 0.707.
     let coeffs = BiquadLowpassSpec {
         f0: 2_000.0 / fs,
         q: 0.707,

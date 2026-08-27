@@ -1,8 +1,6 @@
 //! Variable-rate stream processors.
 //!
-//! Decimators, interpolators, and polyphase resamplers — anything where
-//! input and output rates differ. All implement
-//! [`crate::traits::StreamProcessor`].
+//! Includes decimators, interpolators, and polyphase resamplers.
 
 mod decimator;
 mod interpolator;

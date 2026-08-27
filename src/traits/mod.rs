@@ -1,17 +1,7 @@
-//! Core execution traits.
+//! Core processing traits.
 //!
-//! The traits in this module describe *shapes* of processing, not specific
-//! filter families. Concrete processors implement whichever traits match
-//! their natural API — most causal LTI filters implement
-//! [`SampleProcessor`], block-native algorithms implement
-//! [`BlockProcessor`], variable-rate operators implement
-//! [`StreamProcessor`], and whole-array algorithms implement
-//! [`WholeSignalProcessor`].
-//!
-//! Numeric bounds (e.g. `num_traits::Float`) are deliberately *not* placed
-//! on these traits; they live on concrete implementations so that
-//! non-float processors (integer DSP, fixed-point, symbol streams) remain
-//! expressible.
+//! Traits describe processing shapes; numeric bounds remain on concrete
+//! implementations.
 
 mod block;
 mod ext;
@@ -47,11 +37,8 @@ pub trait Retune<Coeffs> {
     fn retune(&mut self, coeffs: Coeffs);
 }
 
-/// A high-level specification that can be turned into something concrete
-/// — typically a coefficient block, a model, or a ready-to-run processor.
-///
-/// This is the bridge between the *design* layer (filter specs in
-/// [`crate::design`]) and the *runtime* layer.
+/// A high-level specification that produces a coefficient block, model, or
+/// ready-to-run processor.
 pub trait Design {
     /// What `design` produces (e.g. [`crate::coeffs::FirCoeffs`]).
     type Output;

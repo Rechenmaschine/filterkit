@@ -1,15 +1,7 @@
 //! Frequency response evaluation for filter coefficients.
 //!
-//! `magnitude_at` and `phase_at` compute `|H(e^{j 2π f})|` and
-//! `arg(H(...))` for a normalised frequency `f ∈ [0, 0.5]`. Results are
-//! always in `f64`: this is design verification, not a hot path, and
-//! the precision is welcome.
-//!
-//! The canonical implementation lives on
-//! [`TransferFunction`](crate::coeffs::TransferFunction); other coeff
-//! types either delegate via `to_transfer_function` ([`BiquadCoeffs`],
-//! [`FirCoeffs`]) or, in the SOS case, run the cascade per section so
-//! the conditioning advantage of the sectioned form isn't thrown away.
+//! Responses are evaluated at normalised frequencies in `[0, 0.5]` and
+//! returned as `f64` values for analysis.
 
 use crate::coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, TransferFunction};
 

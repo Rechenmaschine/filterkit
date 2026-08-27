@@ -57,16 +57,10 @@ impl<T: Default + Copy, const N: usize> Fir<T, N> {
     /// stitching together processing of contiguous blocks without
     /// introducing a discontinuity at the join.
     pub fn with_history(coeffs: FirCoeffs<T, N>, history: [T; N]) -> Self {
-        // Internal buffer is circular with `head` pointing at the slot
-        // that will receive the next input. Place `history[0]` at
-        // `head - 1`, `history[1]` at `head - 2`, etc. Choosing
-        // `head = 0` and writing history in reverse satisfies this.
+        // Store history in the circular layout expected by `process_sample`.
         let mut buf = [T::default(); N];
         if N > 0 {
             for k in 0..N {
-                // x[n - 1 - k] = history[k]; slot index from head = 0
-                // walking backwards: (N - 1 - k) % N gives the correct
-                // index for "k steps back from head".
                 buf[(N - 1 - k) % N] = history[k];
             }
         }
@@ -109,11 +103,8 @@ where
         if N == 0 {
             return T::zero();
         }
-        // Write new sample.
         self.state.buf[self.state.head] = input;
 
-        // Accumulate b[k] * x[n - k]; start from the most recent sample
-        // and walk backwards through the circular buffer.
         let mut acc = T::zero();
         let mut idx = self.state.head;
         for k in 0..N {
@@ -121,7 +112,6 @@ where
             idx = if idx == 0 { N - 1 } else { idx - 1 };
         }
 
-        // Advance head.
         self.state.head += 1;
         if self.state.head == N {
             self.state.head = 0;

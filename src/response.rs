@@ -1,15 +1,7 @@
-//! Vector-producing response helpers for analysis and plotting.
+//! Response helpers for analysis and plotting.
 //!
-//! The per-frequency primitives live on each coefficient type in
-//! `crate::design::freq_response`. This module wraps them with:
-//!
-//! - a [`FrequencyResponse`] trait so downstream code can be generic
-//!   over the various coefficient types,
-//! - sweep helpers that evaluate magnitude/phase over a frequency grid,
-//! - phase unwrapping and (numerical) group delay,
-//! - [`impulse_response`] / [`step_response`] for any [`SampleProcessor`].
-//!
-//! Requires the `alloc` and `design` features.
+//! Provides frequency sweeps, phase unwrapping, group delay, and
+//! impulse/step responses.
 
 use alloc::vec::Vec;
 
@@ -79,7 +71,6 @@ where
     }
 }
 
-// Forward references to the response of an owned value through a borrow.
 impl<R: FrequencyResponse + ?Sized> FrequencyResponse for &R {
     fn magnitude_at(&self, f: f64) -> f64 {
         (**self).magnitude_at(f)

@@ -1,14 +1,8 @@
 //! RBJ "audio EQ cookbook" biquad designers.
 //!
-//! All take a normalised cutoff `f0/fs` (so sample rate cancels out) and
-//! return a [`BiquadCoeffs`] in normalised form. `q` is the standard
-//! "Q-factor" parameter.
-//!
-//! Each spec exposes two materialisers:
-//! - `design()` — returns [`BiquadCoeffs<f64>`] for reuse / inspection.
-//! - `build::<T>()` — returns a ready-to-run [`Biquad<T>`] processor
-//!   with zero initial state. Equivalent to
-//!   `Biquad::new(spec.design()? converted to T)`.
+//! Specs take a normalised cutoff `f0/fs` and return normalised
+//! [`BiquadCoeffs`]. Use `design()` for coefficients or `build()` for a
+//! ready-to-run processor.
 
 use crate::coeffs::BiquadCoeffs;
 use crate::processors::Biquad;
@@ -129,7 +123,6 @@ impl BiquadNotchSpec {
     }
 }
 
-/// Helper: convert an `f64` biquad coefficient set to a generic `T`.
 fn coeffs_to<T>(c: BiquadCoeffs<f64>) -> Result<BiquadCoeffs<T>, BiquadDesignError>
 where
     T: num_traits::FromPrimitive,
@@ -143,12 +136,7 @@ where
     ))
 }
 
-/// Numeric bounds for materialising a biquad against a generic `T`.
-///
-/// Blanket-implemented for any type that is `Copy`, has additive and
-/// multiplicative ring structure, a zero, and supports
-/// [`num_traits::FromPrimitive`] (needed to cast the `f64` design
-/// output into `T`).
+/// Numeric requirements for converting designed coefficients to `T`.
 pub trait BiquadScalar:
     Copy
     + num_traits::Zero
@@ -169,28 +157,28 @@ impl<T> BiquadScalar for T where
 }
 
 impl BiquadLowpassSpec {
-    /// One-step path: design and wrap in a [`Biquad`].
+    /// Design and build a [`Biquad`].
     pub fn build<T: BiquadScalar>(&self) -> Result<Biquad<T>, BiquadDesignError> {
         Ok(Biquad::new(coeffs_to::<T>(self.design()?)?))
     }
 }
 
 impl BiquadHighpassSpec {
-    /// One-step path: design and wrap in a [`Biquad`].
+    /// Design and build a [`Biquad`].
     pub fn build<T: BiquadScalar>(&self) -> Result<Biquad<T>, BiquadDesignError> {
         Ok(Biquad::new(coeffs_to::<T>(self.design()?)?))
     }
 }
 
 impl BiquadBandpassSpec {
-    /// One-step path: design and wrap in a [`Biquad`].
+    /// Design and build a [`Biquad`].
     pub fn build<T: BiquadScalar>(&self) -> Result<Biquad<T>, BiquadDesignError> {
         Ok(Biquad::new(coeffs_to::<T>(self.design()?)?))
     }
 }
 
 impl BiquadNotchSpec {
-    /// One-step path: design and wrap in a [`Biquad`].
+    /// Design and build a [`Biquad`].
     pub fn build<T: BiquadScalar>(&self) -> Result<Biquad<T>, BiquadDesignError> {
         Ok(Biquad::new(coeffs_to::<T>(self.design()?)?))
     }

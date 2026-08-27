@@ -33,7 +33,6 @@ fn main() {
         .map(|i| (2.0 * core::f64::consts::PI * f_signal * i as f64 / fs_in).sin())
         .collect();
 
-    // Output buffer: we expect roughly n_in * up / down output samples.
     let mut ys = vec![0.0; n_in * up / down + 16];
     let status = resampler.process_stream(&xs, &mut ys);
 

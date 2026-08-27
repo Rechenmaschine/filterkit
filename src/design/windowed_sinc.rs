@@ -36,7 +36,7 @@ pub enum WindowedSincError {
 }
 
 impl WindowedSincLowpassSpec {
-    /// One-step path: design and wrap in a [`Fir`](crate::processors::Fir).
+    /// Design and build a [`Fir`](crate::processors::Fir).
     pub fn build<const N: usize>(
         &self,
     ) -> Result<crate::processors::Fir<f64, N>, WindowedSincError> {

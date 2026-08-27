@@ -25,9 +25,7 @@ impl<T: num_traits::One> Gain<T> {
 }
 
 impl<T> Reset for Gain<T> {
-    fn reset(&mut self) {
-        // Stateless.
-    }
+    fn reset(&mut self) {}
 }
 
 impl<T> Retune<T> for Gain<T> {

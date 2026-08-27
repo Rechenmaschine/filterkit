@@ -17,12 +17,7 @@ impl<T, const N: usize> SosCoeffs<T, N> {
         Self { sections }
     }
 
-    /// Build an SOS cascade from an iterable of [`BiquadCoeffs`].
-    ///
-    /// Convenience alias for [`SosCoeffs::new`] taking a const-size
-    /// array. The two are interchangeable; this name reads more
-    /// naturally in code that originated as a Vec or iterator chain
-    /// later collected into an array.
+    /// Build an SOS cascade from an array of [`BiquadCoeffs`].
     pub const fn from_biquads(sections: [BiquadCoeffs<T>; N]) -> Self {
         Self { sections }
     }

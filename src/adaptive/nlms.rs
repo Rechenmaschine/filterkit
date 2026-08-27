@@ -107,7 +107,6 @@ where
             return err;
         }
 
-        // Compute input power x^T x.
         let mut power = T::zero();
         for k in 0..n {
             power = power + self.buf[k] * self.buf[k];

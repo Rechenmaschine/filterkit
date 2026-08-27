@@ -1,8 +1,4 @@
-//! Adaptive filters.
-//!
-//! Time-varying, signal-driven processors that adapt internal weights
-//! against a desired reference. All implement
-//! [`crate::traits::AdaptiveProcessor`].
+//! Adaptive filters implementing [`crate::traits::AdaptiveProcessor`].
 
 #[cfg(feature = "alloc")]
 mod lms;

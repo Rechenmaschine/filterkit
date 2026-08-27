@@ -1,17 +1,6 @@
-//! Filter representations — the *what*, not the *how*.
+//! Coefficient and parameter types for filter representations.
 //!
-//! These types describe an LTI system mathematically. They do not run
-//! anything. To execute, pair them with a processor from
-//! [`crate::processors`]:
-//!
-//! - [`FirCoeffs`] + [`crate::processors::Fir`]
-//! - [`BiquadCoeffs`] + [`crate::processors::Biquad`]
-//! - [`SosCoeffs`] + [`crate::processors::SosCascade`]
-//! - [`TransferFunction`] + [`crate::processors::DirectFormI`]
-//! - [`StateSpace`] + [`crate::processors::StateSpaceProcessor`]
-//!
-//! Coefficient values are kept separate from runtime state so they may
-//! be shared (`&'static`, multiple voices, etc.) while state is not.
+//! Coefficients are separate from processor state and can be shared.
 
 mod biquad;
 mod fir;

@@ -8,9 +8,6 @@
 /// Construct via [`Self::from_alpha`], [`Self::from_time_constant`], or
 /// [`Self::from_cutoff_hz`]; then call [`Self::design`] to produce the
 /// concrete coefficient.
-///
-/// All three constructors yield a *response-domain* α: the weight on
-/// the new input sample, in `(0, 1]`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ExponentialAverageSpec {
     alpha: f64,
@@ -78,15 +75,10 @@ impl ExponentialAverageSpec {
         self.alpha
     }
 
-    /// Materialise to an `α` of the target numeric type.
+    /// Convert the resolved `α` to the target numeric type.
     ///
-    /// This is the **coefficient-only** path — useful if you want to
-    /// share the same α across several filters or store it for later.
-    /// If you just want a ready-to-run filter, prefer [`Self::build`].
-    ///
-    /// Returns [`ExponentialAverageError::InvalidParameter`] if `T`
-    /// cannot represent the underlying `f64` (e.g. NaN, overflow on
-    /// fixed-point types).
+    /// Returns [`ExponentialAverageError::InvalidParameter`] if conversion
+    /// fails.
     pub fn design<T>(&self) -> Result<T, ExponentialAverageError>
     where
         T: num_traits::FromPrimitive,
@@ -94,10 +86,7 @@ impl ExponentialAverageSpec {
         T::from_f64(self.alpha).ok_or(ExponentialAverageError::InvalidParameter)
     }
 
-    /// One-step path: materialise this spec straight into a
-    /// [`Ema`] processor with zero initial state.
-    ///
-    /// Equivalent to `Ema::new(spec.design()?)`, just shorter.
+    /// Design and build an [`Ema`] with zero initial state.
     ///
     /// [`Ema`]: crate::processors::Ema
     pub fn build<T>(&self) -> Result<crate::processors::Ema<T>, ExponentialAverageError>

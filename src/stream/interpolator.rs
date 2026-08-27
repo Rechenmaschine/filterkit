@@ -70,7 +70,7 @@ where
             return StreamStatus { consumed, produced };
         }
 
-        // We may still owe outputs from a partially-emitted previous input.
+        // Finish phases left by a previous input.
         while self.phase != 0 && produced < output.len() {
             output[produced] = self.compute_phase();
             produced += 1;
@@ -85,22 +85,16 @@ where
             if produced >= output.len() {
                 break;
             }
-            // Insert new sample into the high-rate delay line, then mark
-            // remaining L-1 high-rate slots as zeros (the next L-1 outputs
-            // are computed by stepping phase without injecting samples).
+            // Insert the input and emit its L phases.
             self.buf[self.head] = x;
             self.head = (self.head + 1) % N;
             consumed += 1;
 
-            // Emit first phase = 0 output (corresponds to the just-inserted
-            // sample).
             output[produced] = self.compute_phase();
             produced += 1;
             self.phase = 1;
 
             while self.phase < l && produced < output.len() {
-                // Stuff a zero into the high-rate delay line for each
-                // remaining sub-phase.
                 self.buf[self.head] = T::zero();
                 self.head = (self.head + 1) % N;
                 output[produced] = self.compute_phase();
@@ -111,9 +105,7 @@ where
             if self.phase >= l {
                 self.phase = 0;
             } else {
-                // We couldn't finish this input's phases — leave phase
-                // marker so next call resumes here, but we still consumed
-                // the input.
+                // Resume the remaining phases on the next call.
                 break;
             }
         }

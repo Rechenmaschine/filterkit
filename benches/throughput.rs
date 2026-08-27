@@ -53,8 +53,6 @@ fn bench_sos_n(c: &mut Criterion) {
     let mut g = c.benchmark_group("sos");
     g.throughput(Throughput::Elements(BLOCK as u64));
 
-    // Run separate const-N benches so we can see per-section cost
-    // grow (or, more interestingly, *not* grow linearly with N).
     {
         let coeffs = SosCoeffs::new([section; 1]);
         g.bench_function("N=1", |b| {

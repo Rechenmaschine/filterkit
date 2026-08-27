@@ -47,13 +47,11 @@ where
     type Output = T;
 
     fn process_sample(&mut self, input: T) -> Self::Output {
-        // Output: y = C x + D u (using *current* state).
         let mut y = self.coeffs.d * input;
         for i in 0..N {
             y = y + self.coeffs.c[i] * self.state[i];
         }
 
-        // Next state into scratch: x_next = A x + B u.
         for i in 0..N {
             let mut acc = self.coeffs.b[i] * input;
             for j in 0..N {

@@ -1,7 +1,6 @@
 //! Design helpers.
 //!
-//! Specifications that compile down to filter coefficients via the
-//! [`crate::traits::Design`] trait.
+//! Specifications that compile down to filter coefficients or processors.
 
 mod biquad;
 mod ema;

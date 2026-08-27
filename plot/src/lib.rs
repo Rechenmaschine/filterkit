@@ -1,17 +1,7 @@
 //! Plotting helpers for [`filterkit`].
 //!
-//! Thin builder wrappers around [`plotters`] that turn anything
-//! implementing [`filterkit::response::FrequencyResponse`] into a Bode
-//! plot, magnitude plot, or phase plot, and turn any
-//! [`SampleProcessor`] into an impulse- or step-response plot.
-//!
-//! Each plot has two finishers:
-//!
-//! - [`BodePlot::save`] (and equivalents) writes to a file — `.png`,
-//!   `.jpg`, or `.svg` picked by extension.
-//! - [`BodePlot::show`] (and equivalents) writes to a temp SVG and
-//!   opens it in the system's default viewer (browser / Preview / …),
-//!   giving you basic zoom and pan for free.
+//! Provides Bode, magnitude, impulse, and step-response plots. Use
+//! `save` to write a file or `show` to open a temporary SVG.
 //!
 //! # Example
 //!
@@ -30,8 +20,6 @@
 //!     .unwrap();
 //! ```
 //!
-//! [`SampleProcessor`]: filterkit::traits::SampleProcessor
-
 #![deny(unsafe_code)]
 #![warn(missing_debug_implementations)]
 
@@ -48,49 +36,24 @@ use filterkit::traits::{Reset, SampleProcessor};
 use plotters::coord::Shift;
 use plotters::prelude::*;
 
-// ---------------------------------------------------------------------
-// Style
-// ---------------------------------------------------------------------
-//
-// A calm, matplotlib-tab10-ish palette with light gridlines and dark
-// axis text. Anything visible in a plot should pull its colors and
-// typography from here, not from the plotters defaults.
-
-/// Primary line color (magnitude curves, default time-domain).
 const PRIMARY: RGBColor = RGBColor(31, 119, 180);
-/// Secondary line color (phase curves).
 const SECONDARY: RGBColor = RGBColor(214, 39, 40);
-/// Tertiary line color (group delay).
 const TERTIARY: RGBColor = RGBColor(44, 160, 44);
 
-/// Major gridline color (at labeled ticks).
 const GRID_BOLD: RGBColor = RGBColor(215, 215, 215);
-/// Minor gridline color (between labeled ticks).
 const GRID_LIGHT: RGBColor = RGBColor(235, 235, 235);
-/// Color used for axis lines, tick marks, and axis-label text.
 const AXIS: RGBColor = RGBColor(70, 70, 70);
-/// Color for caption/title text.
 const TITLE: RGBColor = RGBColor(40, 40, 40);
-/// Color for the y=0 reference line on time-domain plots.
 const BASELINE: RGBColor = RGBColor(180, 180, 180);
 
-/// Line stroke width used for plotted series.
 const LINE_W: u32 = 3;
-/// Font size for the chart caption.
 const FONT_TITLE: i32 = 32;
-/// Font size for axis descriptions (e.g. "f (Hz)").
 const FONT_DESC: i32 = 22;
-/// Font size for tick labels.
 const FONT_TICK: i32 = 18;
-/// Outer margin around each pane.
 const PANE_MARGIN: i32 = 28;
-/// Vertical space reserved for the X axis labels.
 const X_LABEL_AREA: i32 = 60;
-/// Horizontal space reserved for the Y axis labels.
 const Y_LABEL_AREA: i32 = 96;
 
-/// Above this sample count, time-domain plots skip per-sample dot
-/// markers so they don't become a wall of circles.
 const MAX_DOT_MARKERS: usize = 96;
 
 /// Errors that can come out of a `.save(...)` or `.show(...)` call.
@@ -123,11 +86,6 @@ impl std::fmt::Display for PlotError {
 
 impl Error for PlotError {}
 
-// ---------------------------------------------------------------------
-// .show() helpers — temp file + system viewer
-// ---------------------------------------------------------------------
-
-/// `temp_dir() / "filterkit-plot-{stem}-{nonce}.{ext}"`.
 fn temp_path(stem: &str, ext: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -137,7 +95,6 @@ fn temp_path(stem: &str, ext: &str) -> PathBuf {
     std::env::temp_dir().join(format!("filterkit-plot-{stem}-{nonce:x}.{ext}"))
 }
 
-/// Hand `path` to the platform's default opener.
 fn open_path(path: &Path) -> Result<(), PlotError> {
     let cmd = if cfg!(target_os = "macos") {
         "open"
@@ -153,7 +110,6 @@ fn open_path(path: &Path) -> Result<(), PlotError> {
         .map_err(|e| PlotError::Open(cmd.to_string(), e))
 }
 
-/// Render to a temp SVG and open it in the system viewer.
 fn show_via_save<F>(stem: &str, save: F) -> Result<(), PlotError>
 where
     F: FnOnce(&Path) -> Result<(), PlotError>,
@@ -163,15 +119,7 @@ where
     open_path(&path)
 }
 
-/// Dispatch a generic drawing function (NOT a closure — closures can't
-/// be generic over the backend type) against whichever backend the
-/// path's extension picks. The macro expands the drawing call twice,
-/// once per backend, so monomorphisation kicks in for each.
-///
-/// Usage:
-/// ```ignore
-/// with_render_dispatch!(path, size, |root| draw_thing(root, ...))
-/// ```
+/// Dispatch drawing to the backend selected by the file extension.
 macro_rules! with_render_dispatch {
     ($path:expr, $size:expr, |$root:ident| $call:expr) => {{
         let path: &::std::path::Path = $path;
@@ -223,10 +171,6 @@ impl Backend {
         }
     }
 }
-
-// ---------------------------------------------------------------------
-// Bode plot
-// ---------------------------------------------------------------------
 
 /// Builder for a two-pane Bode plot (magnitude in dB, phase in degrees,
 /// both on a logarithmic frequency axis).
@@ -359,7 +303,6 @@ where
     let panes = if plot.group.is_some() { 3 } else { 2 };
     let areas = root.split_evenly((panes, 1));
 
-    // Magnitude — only this pane carries the overall title.
     let (mag_lo, mag_hi) = pad_range_min_max(plot.mag_db, 6.0);
     let mut mag_chart = ChartBuilder::on(&areas[0])
         .caption(plot.title, ("sans-serif", FONT_TITLE, &TITLE))
@@ -376,7 +319,6 @@ where
         PRIMARY.stroke_width(LINE_W),
     ))?;
 
-    // Phase
     let (ph_lo, ph_hi) = pad_range_min_max(plot.phase_deg, 15.0);
     let mut ph_chart = ChartBuilder::on(&areas[1])
         .margin(PANE_MARGIN)
@@ -392,7 +334,6 @@ where
         SECONDARY.stroke_width(LINE_W),
     ))?;
 
-    // Group delay (optional)
     if let Some(gd) = plot.group {
         let (g_lo, g_hi) = pad_range_min_max(gd, 0.5);
         let mut g_chart = ChartBuilder::on(&areas[2])
@@ -408,10 +349,6 @@ where
     }
     Ok(())
 }
-
-// ---------------------------------------------------------------------
-// Single-pane magnitude
-// ---------------------------------------------------------------------
 
 /// Builder for a single-pane magnitude (dB) plot.
 #[derive(Debug)]
@@ -556,10 +493,6 @@ where
     }
     Ok(())
 }
-
-// ---------------------------------------------------------------------
-// Time-domain: impulse and step
-// ---------------------------------------------------------------------
 
 /// Builder for an impulse-response plot.
 #[derive(Debug)]
@@ -713,7 +646,7 @@ where
         .build_cartesian_2d(0f64..x_hi, y_lo..y_hi)?;
     configure_styled_mesh(&mut chart, x_desc, y_desc)?;
 
-    // y=0 baseline first so series sits on top of it.
+    // Draw the baseline first so the series stays on top.
     if y_lo < 0.0 && y_hi > 0.0 {
         chart.draw_series(LineSeries::new(
             [(0.0, 0.0), (x_hi, 0.0)],
@@ -725,8 +658,7 @@ where
         samples.iter().enumerate().map(|(i, &y)| (i as f64, y)),
         color.stroke_width(LINE_W),
     ))?;
-    // Per-sample dots are useful for short responses but become noise
-    // past ~100 samples.
+    // Markers help for short responses and become noise on long ones.
     if n <= MAX_DOT_MARKERS {
         chart.draw_series(
             samples
@@ -738,13 +670,7 @@ where
     Ok(())
 }
 
-// ---------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------
-
-/// Apply the calm shared styling to a chart's mesh: light/sparse
-/// gridlines, dark thin axis lines, decent-size labels, and tidy tick
-/// formatting (no "100.0" or "-0.0" noise).
+/// Configure shared chart styling and axis labels.
 fn configure_styled_mesh<DB, X, Y>(
     chart: &mut ChartContext<'_, DB, Cartesian2d<X, Y>>,
     x_desc: &str,
@@ -773,8 +699,7 @@ where
     Ok(())
 }
 
-/// Tick label formatter that suppresses trailing zeros and the
-/// `-0.0` artefact that comes out of plotters' default formatting.
+/// Format tick labels without trailing zeros or `-0.0`.
 fn format_tick(v: &f64) -> String {
     let v = *v;
     if v.abs() < 1e-10 {
@@ -792,13 +717,9 @@ fn format_tick(v: &f64) -> String {
     }
 }
 
-/// Min/max of the finite entries in `samples`, padded outward by
-/// `min_pad` so a flat curve still has visible vertical space.
+/// Return a padded range for the finite values in `samples`.
 ///
-/// Non-finite samples (`±Inf`, `NaN`) are skipped — magnitude-in-dB
-/// hits `-Inf` whenever the filter has a zero on the unit circle (a
-/// biquad RBJ lowpass has one at Nyquist), and one such sample
-/// shouldn't blow up the whole axis.
+/// Non-finite values are ignored.
 fn pad_range_min_max(samples: &[f64], min_pad: f64) -> (f64, f64) {
     let mut lo = f64::INFINITY;
     let mut hi = f64::NEG_INFINITY;

@@ -1,8 +1,7 @@
 //! Whole-signal processors.
 //!
-//! Algorithms that need the entire finite signal in hand: zero-phase
-//! filtering (`filtfilt`), centered moving averages, batch spectral
-//! processing. All implement [`crate::traits::WholeSignalProcessor`].
+//! Algorithms that require the complete finite signal, such as zero-phase
+//! filtering.
 
 #[cfg(feature = "alloc")]
 mod filtfilt;

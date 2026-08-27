@@ -1,7 +1,4 @@
-//! Combinators for composing [`SampleProcessor`]s.
-//!
-//! [`SampleProcessor`]: crate::traits::SampleProcessor
-//! [`ProcessorExt`]: crate::traits::ProcessorExt
+//! Combinators for composing [`crate::traits::SampleProcessor`]s.
 
 mod bypass;
 mod chain;

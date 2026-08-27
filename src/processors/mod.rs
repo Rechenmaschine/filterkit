@@ -1,8 +1,4 @@
-//! Runtime processors.
-//!
-//! These are the things that actually run on samples. They own the
-//! mutable state for a filter realisation; coefficients live separately
-//! in [`crate::coeffs`] so they can be shared.
+//! Stateful runtime processors.
 
 mod biquad;
 mod delay;
