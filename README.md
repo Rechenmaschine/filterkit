@@ -10,14 +10,15 @@ filterkit = "0.1"
 ## Who it is for
 
 For Rust applications that process sampled signals and need reusable
-processors with explicit runtime state. The crate can be used with a
-`no_std`, no-alloc configuration or with heap-backed processors through the
-`alloc` feature.
+processors with explicit runtime state. `no_std` and no-alloc are supported;
+`alloc` adds dynamic processors.
 
 ## Core model
 
-Filter representations and runtime state are separate. Processing is grouped
-by shape:
+Filter representations and runtime state are separate. This lets coefficient
+data be shared while each processor keeps its own delay lines and state.
+
+Processing is grouped by shape:
 
 - `SampleProcessor`: one input sample produces one output sample.
 - `BlockProcessor`: block-based processing.
@@ -25,14 +26,22 @@ by shape:
 - `WholeSignalProcessor`: processing over a complete finite signal.
 - `AdaptiveProcessor`: processors whose coefficients update from the signal.
 
-Included components cover FIR and IIR filters, filter combinators, decimators
-and resamplers, whole-signal forward/backward filtering, adaptive LMS/NLMS,
-and an optional linear Kalman filter. Design helpers cover moving averages,
-exponential averages, windowed-sinc FIRs, and RBJ biquads.
+`ProcessorExt` provides composition helpers such as `.then(...)`.
 
-The `design` feature is enabled by default. `kalman` is opt-in and pulls in
-`nalgebra`; `alloc` enables heap-backed processors. Disable default features
-for the `no_std`, no-alloc configuration.
+## Included
+
+- FIR and IIR filters, including biquads, SOS cascades, direct forms, gain,
+  delay, EMA, and state-space processors.
+- Combinators for chains, parallel branches, sums, mapping, taps, bypass, and
+  wet/dry mixing.
+- Decimators, interpolators, polyphase resampling, and forward/backward
+  whole-signal filtering.
+- Design helpers for moving averages, exponential averages, windowed-sinc
+  FIRs, and RBJ biquads.
+- Optional LMS/NLMS adaptive filters and a linear Kalman filter.
+
+The `design` feature is enabled by default. `kalman` is opt-in. Disable
+default features for the `no_std`, no-alloc configuration.
 
 ## Quick start
 
@@ -48,27 +57,16 @@ let mut filter = Biquad::new(coeffs);
 let y = filter.process_sample(1.0_f64);
 ```
 
-Processors can be composed with `ProcessorExt`:
+Composition uses the same sample-processing interface:
 
 ```rust
 use filterkit::{ProcessorExt, SampleProcessor, processors::{Biquad, Gain}};
 use filterkit::design::BiquadLowpassSpec;
 
-let lp = Biquad::new(BiquadLowpassSpec { f0: 0.10, q: 0.707 }.design().unwrap());
-let mut chain = lp.then(Gain::new(0.7_f64));
+let lowpass = Biquad::new(BiquadLowpassSpec { f0: 0.10, q: 0.707 }.design().unwrap());
+let mut chain = lowpass.then(Gain::new(0.7_f64));
 
 let y = chain.process_sample(0.5);
-```
-
-## Examples
-
-Run an example with:
-
-```text
-cargo run --example biquad_lowpass
-cargo run --example combinator_chain
-cargo run --example zero_phase_filtfilt
-cargo run --example kalman_tracking --features kalman
 ```
 
 ## License

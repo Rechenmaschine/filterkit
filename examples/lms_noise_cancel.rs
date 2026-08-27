@@ -5,12 +5,12 @@
 //! from the corrupted observation, and watch the residual converge to
 //! the clean signal.
 //!
-//! Run with: `cargo run --example lms_noise_cancel`
-//!
 //! [`Lms`]: filterkit::adaptive::Lms
 
 use filterkit::adaptive::Lms;
 use filterkit::AdaptiveProcessor;
+use rand::rngs::SmallRng;
+use rand::{RngExt, SeedableRng};
 
 fn main() {
     // Plant impulse response we want LMS to learn.
@@ -27,13 +27,12 @@ fn main() {
     let fs = 48_000.0_f32;
     let f = 1_000.0;
 
-    let mut rng_state: u32 = 0xABAD_CAFE;
+    let mut rng = SmallRng::seed_from_u64(0xABAD_CAFE);
     let mut residual_after_settle = 0.0_f32;
     let mut count = 0_usize;
 
     for n in 0..20_000 {
-        rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-        let noise = (rng_state >> 8) as f32 / (1 << 24) as f32 - 0.5;
+        let noise = rng.random_range(-0.5_f32..0.5_f32);
 
         let clean = (2.0 * core::f32::consts::PI * f * n as f32 / fs).sin();
         // Filtered noise = plant * noise (length-3 FIR by hand)

@@ -1,10 +1,11 @@
 //! Smooth a noisy ramp with an EMA, configured three ways:
 //! direct α, time constant, and cutoff frequency.
 //!
-//! Run with: `cargo run --example ema_smoothing`
 
 use filterkit::design::ExponentialAverageSpec;
 use filterkit::SampleProcessor;
+use rand::rngs::SmallRng;
+use rand::{RngExt, SeedableRng};
 
 fn main() {
     let fs = 1_000.0_f64; // 1 kHz
@@ -21,12 +22,11 @@ fn main() {
     let mut p_tau = a_tau.build::<f64>().unwrap();
     let mut p_fc = a_fc.build::<f64>().unwrap();
 
-    let mut rng_state: u32 = 0xC0FF_EE00;
+    let mut rng = SmallRng::seed_from_u64(0xC0FF_EE00);
     println!();
     println!("# n   noisy    α=0.05   τ=20ms    fc=8Hz");
     for n in 0..80 {
-        rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-        let noise = (rng_state >> 8) as f64 / (1 << 24) as f64 - 0.5;
+        let noise = rng.random_range(-0.5_f64..0.5_f64);
         let x = n as f64 * 0.05 + noise * 0.6;
         let ya = p_alpha.process_sample(x);
         let yt = p_tau.process_sample(x);

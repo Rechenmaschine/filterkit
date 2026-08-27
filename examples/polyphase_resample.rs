@@ -1,6 +1,5 @@
 //! Resample a 48 kHz sinusoid to 44.1 kHz with a polyphase resampler.
 //!
-//! Run with: `cargo run --example polyphase_resample`
 
 use filterkit::design::{Window, WindowedSincLowpassSpec};
 use filterkit::stream::PolyphaseResampler;

@@ -3,7 +3,7 @@ use crate::traits::{Reset, SampleProcessor};
 /// Parallel processors whose outputs are summed.
 ///
 /// Both branches must produce the same output type. Useful for shelf +
-/// peak mixers, side-chain blends, multi-band designs that recombine, …
+/// peak mixers, side-chain blends, and multi-band designs that recombine.
 #[derive(Clone, Copy, Debug)]
 pub struct Sum<A, B> {
     /// Upper branch.

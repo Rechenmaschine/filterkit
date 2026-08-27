@@ -4,12 +4,8 @@
 
 use filterkit::{KalmanFilter, KalmanModel, SampleProcessor};
 use nalgebra::{Matrix1, Matrix2, RowVector2, SVector, Vector2};
-
-/// Deterministic LCG noise in roughly `[-0.5, 0.5]`, scaled by `amp`.
-fn noise(state: &mut u32, amp: f64) -> f64 {
-    *state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
-    ((*state >> 8) as f64 / (1u32 << 24) as f64 - 0.5) * amp
-}
+use rand::rngs::SmallRng;
+use rand::{RngExt, SeedableRng};
 
 /// A 1-D constant-velocity tracker should estimate position with lower
 /// error than the raw noisy measurements it is fed.
@@ -28,7 +24,7 @@ fn constant_velocity_beats_raw_measurements() {
 
     let true_velocity = 0.5;
     let meas_amp = 1.0; // ±0.5 noise band
-    let mut rng = 0xC0FF_EE00_u32;
+    let mut rng = SmallRng::seed_from_u64(0xC0FF_EE00);
 
     let mut sse_filtered = 0.0;
     let mut sse_raw = 0.0;
@@ -36,7 +32,8 @@ fn constant_velocity_beats_raw_measurements() {
 
     for k in 0..steps {
         let true_pos = true_velocity * k as f64;
-        let z = true_pos + noise(&mut rng, meas_amp);
+        let noise = rng.random_range(-0.5_f64..0.5_f64) * meas_amp;
+        let z = true_pos + noise;
 
         let est = kf.process_sample(SVector::<f64, 1>::new(z));
         let filtered_pos = est.mean[0];

@@ -3,8 +3,6 @@
 //!
 //! Demonstrates the fluent [`ProcessorExt`] API.
 //!
-//! Run with: `cargo run --example combinator_chain`
-//!
 //! [`ProcessorExt`]: filterkit::ProcessorExt
 
 use filterkit::design::{BiquadHighpassSpec, BiquadLowpassSpec};

@@ -3,8 +3,6 @@
 //! Compare the phase of the causal output and the forward/backward
 //! output for a low-frequency tone.
 //!
-//! Run with: `cargo run --example zero_phase_filtfilt`
-//!
 //! [`ForwardBackward`]: filterkit::whole::ForwardBackward
 
 use filterkit::design::BiquadLowpassSpec;

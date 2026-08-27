@@ -2,10 +2,11 @@
 //! with a linear Kalman filter, then compare the filtered estimate to the
 //! raw measurements.
 //!
-//! Run with: `cargo run --example kalman_tracking --features kalman`
 
 use filterkit::{KalmanFilter, KalmanModel, SampleProcessor};
 use nalgebra::{Matrix1, Matrix2, RowVector2, SVector};
+use rand::rngs::SmallRng;
+use rand::{RngExt, SeedableRng};
 
 fn main() {
     let dt = 1.0_f64;
@@ -21,7 +22,7 @@ fn main() {
     let mut kf = KalmanFilter::with_prior_cov(model, Matrix2::identity() * 10.0);
 
     let true_velocity = 0.5;
-    let mut rng: u32 = 0xC0FF_EE00;
+    let mut rng = SmallRng::seed_from_u64(0xC0FF_EE00);
 
     println!("# k   true     meas    filt_pos  filt_vel");
     let mut sse_filt = 0.0;
@@ -32,9 +33,7 @@ fn main() {
     for k in 0..steps {
         let true_pos = true_velocity * k as f64;
 
-        // Deterministic ±0.5 measurement noise.
-        rng = rng.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
-        let noise = (rng >> 8) as f64 / (1u32 << 24) as f64 - 0.5;
+        let noise = rng.random_range(-0.5_f64..0.5_f64);
         let z = true_pos + noise;
 
         let est = kf.process_sample(SVector::<f64, 1>::new(z));

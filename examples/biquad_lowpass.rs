@@ -1,7 +1,6 @@
 //! Filter a sum-of-sines signal through a 2nd-order lowpass biquad and
 //! print the result.
 //!
-//! Run with: `cargo run --example biquad_lowpass`
 
 use filterkit::design::BiquadLowpassSpec;
 use filterkit::processors::Biquad;

@@ -1,20 +1,27 @@
 //! # filterkit
 //!
-//! Composable DSP filters and processors for embedded and desktop Rust.
+//! Composable DSP filters and processors for Rust.
 //!
-//! It provides filter representations, processing traits, stateful
-//! processors, combinators, and optional design and analysis helpers.
+//! Filter representations and runtime state are separate. Processing is
+//! grouped into sample, block, stream, whole-signal, and adaptive traits.
 //!
-//! ## Features
+//! ## API index
 //!
-//! | Feature   | Effect                                                          |
-//! |-----------|-----------------------------------------------------------------|
-//! | `std`     | Pulls in `std` (default). Implies `alloc`.                      |
-//! | `alloc`   | Enables [`Vec`]-backed dynamic processors like `FirDyn`.        |
-//! | `design`  | Enables high-level design helpers (windowed sinc, biquad, …).   |
+//! | Module | Main items |
+//! | --- | --- |
+//! | [`traits`] | Processing and lifecycle traits |
+//! | [`coeffs`] | `BiquadCoeffs`, `FirCoeffs`, `SosCoeffs`, `StateSpace`, `TransferFunction` |
+//! | [`processors`] | `Biquad`, `Fir`, `Ema`, `FirstOrder`, `DirectFormI`, `Gain`, `Delay`, `SosCascade` |
+//! | [`combinators`] | `Chain`, `Parallel`, `Sum`, `Map`, `Tap`, `Bypass`, `WetDry` |
+//! | [`stream`] | `Decimator`, `Interpolator`, `PolyphaseResampler` |
+//! | [`whole`] | `ForwardBackward`, `PadType` |
+//! | [`adaptive`] | `Lms`, `Nlms` |
+//! | `design` | Biquad, EMA, moving-average, and windowed-sinc specifications |
+//! | `response` | Frequency-response, sweep, impulse-response, and step-response helpers |
+//! | `estimators` | `GaussianEstimate`, `KalmanModel`, `KalmanFilter` |
 //!
-//! With `default-features = false`, the crate is `no_std`-compatible and
-//! allocates nothing on the heap.
+//! `design`, `response`, and `estimators` are feature-gated. With
+//! `default-features = false`, the crate uses no heap allocation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(unsafe_code)]

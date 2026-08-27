@@ -36,7 +36,7 @@ pub trait SteadyState<T>: SampleProcessor<T, Output = T> + Reset {
 }
 
 /// Causal filters that provide the extra metadata needed by
-/// [`ForwardBackward`](crate::whole::ForwardBackward).
+/// forward/backward filtering.
 ///
 /// `ForwardBackward` uses [`SteadyState::reset_to_steady_input`] for
 /// SciPy-style endpoint initialization. It also needs a default edge

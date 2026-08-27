@@ -1,20 +1,20 @@
 //! Apply a const-sized 5-tap moving average to a noisy ramp.
 //!
-//! Run with: `cargo run --example fir_moving_average`
 
 use filterkit::design::MovingAverageSpec;
 use filterkit::SampleProcessor;
+use rand::rngs::SmallRng;
+use rand::{RngExt, SeedableRng};
 
 fn main() {
     let mut fir = MovingAverageSpec
         .build::<f32, 5>()
         .expect("moving average build");
 
-    let mut rng_state: u32 = 0xDEAD_BEEF;
+    let mut rng = SmallRng::seed_from_u64(0xDEAD_BEEF);
     let xs: Vec<f32> = (0..40)
         .map(|i| {
-            rng_state = rng_state.wrapping_mul(1664525).wrapping_add(1013904223);
-            let noise = (rng_state >> 8) as f32 / (1 << 24) as f32 - 0.5;
+            let noise = rng.random_range(-0.5_f32..0.5_f32);
             i as f32 * 0.1 + noise * 0.3
         })
         .collect();

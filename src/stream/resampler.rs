@@ -73,7 +73,7 @@ where
 
         let mut phases: Vec<T> = Vec::with_capacity(up * sub_len);
         phases.resize(up * sub_len, T::zero());
-        // Polyphase decomposition: phase i takes taps[i], taps[i + L], …
+        // Polyphase decomposition: phase i takes taps[i], taps[i + L], etc.
         for i in 0..up {
             for k in 0..sub_len {
                 let src = i + k * up;
