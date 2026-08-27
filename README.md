@@ -9,18 +9,20 @@ filterkit = "0.1"
 
 ## Who it is for
 
-For Rust applications that need a practical, general-purpose DSP abstraction.
-Use it when you would otherwise write the filter interface, state handling,
-and composition yourself, or when you want to swap filters without changing
-the rest of the pipeline. It covers common cases rather than targeting peak
-throughput and full customization.
+For Rust projects that need a filter, not a DSP framework. It puts common
+filters behind one interface and handles their state and composition, so you
+can swap filters without rewiring the rest of the pipeline. It is a
+general-purpose starting point, not a fully customizable or peak-throughput
+audio library.
 
 ## Core model
 
-Filter representations and runtime state are separate. This lets coefficient
-data be shared while each processor keeps its own delay lines and state.
+Design specs produce coefficients or models; processors consume those values
+and maintain their own runtime state. This keeps optional design and analysis
+code separate from the processing core, while allowing prepared filters to be
+reused.
 
-Processing is grouped by shape:
+Several processing traits cover common filter and signal-processing patterns:
 
 - [`SampleProcessor`](src/traits/sample.rs): one input sample produces one output sample.
 - [`BlockProcessor`](src/traits/block.rs): block-based processing.
