@@ -9,7 +9,7 @@ filterkit = "0.1"
 
 ## What it is
 
-A small, shape-oriented DSP toolkit organised around three ideas:
+The crate separates filter representations, runtime state, and processing:
 
 - **Representation** describes the system (FIR taps, biquad coefficients,
   SOS cascades, transfer functions, state-space models).
@@ -17,8 +17,7 @@ A small, shape-oriented DSP toolkit organised around three ideas:
   representation so coefficient blocks can be `&'static` or shared.
 - **Processor** runs the system against samples.
 
-Execution traits are intentionally small and split by *shape* of
-processing rather than by filter family:
+Processing traits are split by operation shape:
 
 | Trait                  | Use for                                                                    |
 | ---------------------- | -------------------------------------------------------------------------- |
@@ -35,11 +34,10 @@ processing rather than by filter family:
 | `std`     | yes     | Standard library; implies `alloc`.                                    |
 | `alloc`   | yes\*   | `Vec`-backed dynamic processors (`FirDyn`, `SosDyn`, resampler, LMS). |
 | `design`  | yes     | Designers: RBJ biquads, windowed-sinc FIR, moving average.            |
-| `kalman`  | no      | State estimators (`KalmanFilter`, RTS to come). Pulls in `nalgebra`.  |
+| `kalman`  | no      | State estimators (`KalmanFilter`). Pulls in `nalgebra`.              |
 
 `*` `alloc` is on by default because `std` implies it. With
-`default-features = false` you get a pure `no_std`, no-alloc core
-suitable for microcontrollers.
+`default-features = false`, the crate uses a `no_std`, no-alloc core.
 
 ## Example: design and run a biquad lowpass
 
@@ -72,14 +70,14 @@ let y = chain.process_sample(0.5);
 
 Each `cargo run --example <name>` is self-contained:
 
-- `biquad_lowpass` — single biquad on a sum-of-sines test signal
-- `fir_moving_average` — 5-tap MA, designed and run
-- `ema_smoothing` — EMA, three equivalent parameterisations
-- `combinator_chain` — HP → LP → gain, RMS swept across the audio band
-- `lms_noise_cancel` — adaptive cancellation; converges to plant taps
-- `polyphase_resample` — 48 kHz → 44.1 kHz with a windowed-sinc prototype
-- `zero_phase_filtfilt` — compare causal vs forward/backward output
-- `kalman_tracking` — constant-velocity tracker; beats raw measurements
+- `biquad_lowpass`: single biquad on a sum-of-sines test signal
+- `fir_moving_average`: 5-tap MA, designed and run
+- `ema_smoothing`: EMA, three equivalent parameterisations
+- `combinator_chain`: HP -> LP -> gain, RMS swept across the audio band
+- `lms_noise_cancel`: adaptive cancellation
+- `polyphase_resample`: 48 kHz -> 44.1 kHz with a windowed-sinc prototype
+- `zero_phase_filtfilt`: compare causal and forward/backward output
+- `kalman_tracking`: constant-velocity tracker
   (needs `--features kalman`)
 
 ## Scope of 0.1

@@ -2,11 +2,8 @@ use super::Reset;
 
 /// Same-rate, block-native processing.
 ///
-/// `BlockProcessor` is for algorithms whose natural unit is a block of
-/// samples — FFT convolution, overlap-add / overlap-save, partitioned
-/// convolution, SIMD-optimised FIRs, and multi-channel block processors.
-/// They could be wrapped to look like a [`SampleProcessor`], but doing so
-/// often defeats their reason for existing.
+/// `BlockProcessor` handles block-based algorithms such as FFT
+/// convolution, overlap-add, and SIMD batches.
 ///
 /// Output length matches input length.
 ///

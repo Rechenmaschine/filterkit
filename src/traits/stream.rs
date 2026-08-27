@@ -34,7 +34,7 @@ pub trait StreamProcessor<I>: Reset {
     type Output;
 
     /// Pull from `input`, push into `output`, return how much of each
-    /// was used. Implementations must not panic on size mismatches —
+    /// was used. Implementations must not panic on size mismatches.
     /// any slice lengths are valid (including empty ones, which is a
     /// drain operation).
     fn process_stream(&mut self, input: &[I], output: &mut [Self::Output]) -> StreamStatus;

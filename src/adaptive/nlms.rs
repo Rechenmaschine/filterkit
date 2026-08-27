@@ -12,8 +12,7 @@ impl<T> NlmsScalar for T where T: LmsScalar + core::ops::Div<Output = T> {}
 /// Normalised LMS.
 ///
 /// Like [`super::Lms`] but the effective step size is divided by the
-/// instantaneous input power `x^T x + epsilon`, which keeps adaptation
-/// stable as input level varies.
+/// instantaneous input power `x^T x + epsilon`.
 ///
 /// # Call-ordering contract
 ///

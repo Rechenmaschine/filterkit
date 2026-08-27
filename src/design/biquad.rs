@@ -3,6 +3,10 @@
 //! Specs take a normalised cutoff `f0/fs` and return normalised
 //! [`BiquadCoeffs`]. Use `design()` for coefficients or `build()` for a
 //! ready-to-run processor.
+//!
+//! The formulas follow the
+//! [Audio EQ Cookbook](https://www.w3.org/TR/audio-eq-cookbook/) by Robert
+//! Bristow-Johnson.
 
 use crate::coeffs::BiquadCoeffs;
 use crate::processors::Biquad;

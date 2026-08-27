@@ -2,7 +2,7 @@
 ///
 /// `b` holds the numerator (feed-forward) taps, `a` the denominator
 /// (feed-back) taps. Convention: `a[0]` is the implicit unity and is
-/// *not* stored — the first stored coefficient is `a[1]` and corresponds
+/// *not* stored. The first stored coefficient is `a[1]`, which corresponds
 /// to `y[n-1]` in
 ///
 /// ```text

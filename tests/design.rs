@@ -38,7 +38,7 @@ fn windowed_sinc_lowpass_attenuates_above_cutoff() {
     };
     let c = spec.design::<63>().unwrap();
     let mut fir = Fir::new(c);
-    // Feed a Nyquist-rate impulse pattern (+1, -1, +1, -1, ...) — should be
+    // Feed a Nyquist-rate impulse pattern (+1, -1, +1, -1, ...); it should be
     // strongly attenuated by a 0.1-Nyquist lowpass.
     let mut max_out: f64 = 0.0;
     // skip initial transient

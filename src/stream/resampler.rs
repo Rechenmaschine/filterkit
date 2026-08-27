@@ -51,16 +51,13 @@ where
 {
     /// Build a polyphase resampler.
     ///
-    /// `taps` is the prototype lowpass FIR. Designers typically scale by
-    /// `up` so the unity-gain passband is preserved after decimation.
+    /// `taps` is the prototype FIR.
     ///
     /// # Panics
     ///
     /// Panics if `up == 0`, `down == 0`, or `taps.is_empty()`. Also
-    /// panics if `taps.len() < up`: with fewer prototype taps than
-    /// polyphase sub-filters, some sub-filters would degenerate to
-    /// all-zero rows and the resampler would emit silence at those
-    /// phases — almost certainly a usage error.
+    /// panics if `taps.len() < up`, because some polyphase sub-filters
+    /// would have no coefficients.
     pub fn new(taps: &[T], up: usize, down: usize) -> Self {
         assert!(up >= 1 && down >= 1, "up/down must be >= 1");
         assert!(!taps.is_empty(), "taps slice must be non-empty");
@@ -112,7 +109,7 @@ where
 #[cfg(feature = "alloc")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PolyphaseResamplerPrepareError {
-    /// Reported `max_block_len` of zero — no work would be possible.
+    /// Reported `max_block_len` of zero. No work would be possible.
     EmptyBlock,
 }
 

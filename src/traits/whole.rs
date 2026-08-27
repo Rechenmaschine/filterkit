@@ -3,12 +3,8 @@ use super::{Reset, SampleProcessor};
 /// Processors that operate on a whole finite signal at once.
 ///
 /// Unlike [`SampleProcessor`] or [`BlockProcessor`], a
-/// `WholeSignalProcessor` is allowed to be non-causal — e.g. zero-phase
-/// filtering (`filtfilt`), centered moving averages, Savitzky-Golay
-/// smoothing, batch spectral processing.
-///
-/// No `Reset` requirement: whole-signal processors are typically
-/// stateless across calls or carry only design-time data.
+/// `WholeSignalProcessor` can be non-causal, for example when implementing
+/// zero-phase filtering or centered smoothing.
 ///
 /// [`SampleProcessor`]: super::SampleProcessor
 /// [`BlockProcessor`]: super::BlockProcessor

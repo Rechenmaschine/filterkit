@@ -37,8 +37,8 @@ impl<T> LmsScalar for T where
 /// that same step. Using the bundled [`process_adapt`] helper enforces
 /// this ordering for you.
 ///
-/// Requires the `alloc` feature; weights and delay line are heap-backed
-/// because LMS lengths typically vary with the application.
+/// Requires the `alloc` feature because the weights and delay line are
+/// heap-backed.
 ///
 /// [`adapt`]: AdaptiveProcessor::adapt
 /// [`process_sample`]: AdaptiveProcessor::process_sample

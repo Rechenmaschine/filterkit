@@ -2,7 +2,7 @@
 name = "filterkit-plot"
 version = "0.1.0"
 edition = "2021"
-description = "Plotting helpers for filterkit — Bode plots, impulse/step responses, etc."
+description = "Plotting helpers for filterkit: Bode plots and impulse/step responses."
 license = "MIT OR Apache-2.0"
 keywords = ["dsp", "filter", "plotting", "bode"]
 categories = ["science", "visualization"]

@@ -4,8 +4,8 @@ use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState}
 /// Direct-form I IIR realisation of a [`TransferFunction`].
 ///
 /// Holds `NB` past inputs and `NA` past outputs. It is intended for
-/// low-order designs; higher-order IIR filters are usually more stable
-/// when represented as a cascade of second-order sections.
+/// low-order designs. Higher-order IIR filters can be represented as a
+/// cascade of second-order sections.
 #[derive(Clone, Copy, Debug)]
 pub struct DirectFormI<T, const NB: usize, const NA: usize> {
     /// Active transfer function.

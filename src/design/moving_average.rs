@@ -18,7 +18,7 @@ impl MovingAverageSpec {
     ///
     /// `N` is supplied via turbofish (`spec.design::<f32, 16>()`); the
     /// compile-time size keeps the result no-alloc and `Copy`. Returns
-    /// just the coefficients — use [`Self::build`] if you want a
+    /// just the coefficients. Use [`Self::build`] if you want a
     /// ready-to-run [`Fir`](crate::processors::Fir).
     pub fn design<T, const N: usize>(self) -> Result<FirCoeffs<T, N>, MovingAverageError>
     where

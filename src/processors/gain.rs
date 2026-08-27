@@ -2,8 +2,7 @@ use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState}
 
 /// Stateless multiplicative gain.
 ///
-/// Trivially a [`SampleProcessor`]; mostly useful as a building block in
-/// chains and as an identity sanity check.
+/// A [`SampleProcessor`] that multiplies every input by a fixed value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Gain<T> {
     /// Multiplier applied to every sample.

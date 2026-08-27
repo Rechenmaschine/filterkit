@@ -5,7 +5,7 @@ use crate::traits::{FiltFiltKernel, WholeSignalProcessor};
 /// Edge extension used before the forward/backward passes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PadType {
-    /// Odd reflection around each endpoint. This is SciPy's default.
+    /// Odd reflection around each endpoint.
     Odd,
     /// Even reflection around each endpoint.
     Even,
@@ -15,7 +15,8 @@ pub enum PadType {
     None,
 }
 
-/// Zero-phase forward/backward filtering a la SciPy's `filtfilt`.
+/// Zero-phase forward/backward filtering based on
+/// [SciPy's `filtfilt`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.filtfilt.html).
 ///
 /// Runs the wrapped causal filter forward over an edge-extended signal,
 /// then backward over the forward result. Before each pass, the wrapped

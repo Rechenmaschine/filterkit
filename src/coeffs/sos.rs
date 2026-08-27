@@ -2,9 +2,8 @@ use super::BiquadCoeffs;
 
 /// A fixed-size cascade of second-order sections.
 ///
-/// High-order IIR filters are typically realised as a cascade of biquads
-/// to keep numerical conditioning reasonable. The order of `sections`
-/// matters: signal flows from `sections[0]` through `sections[N - 1]`.
+/// Represents an IIR filter as an ordered cascade of biquads. Signal flows
+/// from `sections[0]` through `sections[N - 1]`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SosCoeffs<T, const N: usize> {
     /// Biquad sections, applied in order.

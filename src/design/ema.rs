@@ -1,7 +1,7 @@
 //! Exponential moving average design.
 //!
 //! All three constructors produce a single response-domain `α` in
-//! `(0, 1]` suitable for [`crate::processors::Ema`].
+//! `(0, 1]` for [`crate::processors::Ema`].
 
 /// Spec for an exponential moving average.
 ///
@@ -54,8 +54,7 @@ impl ExponentialAverageSpec {
     /// rate.
     ///
     /// Uses the impulse-invariant mapping
-    /// `α = 1 - e^(-2π f_c / fs)`. This matches what most audio code
-    /// expects when you say "EMA lowpass at X Hz".
+    /// `α = 1 - e^(-2π f_c / fs)`.
     pub fn from_cutoff_hz(
         cutoff_hz: f64,
         sample_rate: f64,

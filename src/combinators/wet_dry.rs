@@ -2,9 +2,7 @@ use crate::traits::{Reset, SampleProcessor};
 
 /// Wet/dry mixer.
 ///
-/// Computes `(1 - wet) * dry + wet * processed`. `wet` typically lies
-/// in `[0, 1]` but is not clamped — values outside the range produce
-/// over/under-driven blends, which is sometimes intentional.
+/// Computes `(1 - wet) * dry + wet * processed`. `wet` is not clamped.
 #[derive(Clone, Copy, Debug)]
 pub struct WetDry<F, T> {
     /// Inner processor.

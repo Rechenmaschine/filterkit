@@ -3,9 +3,7 @@ use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState}
 
 /// Direct-form-II transposed state for one biquad.
 ///
-/// Two state words is enough for any second-order section — the DF2T
-/// topology is well-conditioned and the de facto default in JUCE,
-/// CMSIS-DSP, and similar libraries.
+/// The DF2T topology uses two state values for a second-order section.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BiquadState<T> {
     /// `s1` from the DF2T diagram.

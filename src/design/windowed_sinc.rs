@@ -5,12 +5,11 @@ use crate::coeffs::FirCoeffs;
 pub enum Window {
     /// No window (truncated sinc).
     Rectangular,
-    /// Hann window. Good general-purpose default for audio.
+    /// Hann window.
     Hann,
-    /// Hamming window. Slightly better mainlobe than Hann.
+    /// Hamming window.
     Hamming,
-    /// Blackman window. Stronger stop-band rejection at the cost of
-    /// wider transition.
+    /// Blackman window.
     Blackman,
 }
 

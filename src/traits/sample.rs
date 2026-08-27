@@ -3,18 +3,14 @@ use super::Reset;
 /// A causal, same-rate processor that consumes one input sample and
 /// produces one output sample.
 ///
-/// Most fixed LTI filters and many DSP primitives fit this shape: FIR,
-/// IIR (direct forms), biquads, SOS cascades, gains, delays, integrators,
-/// DC blockers, one-pole filters, and so on. The associated [`Output`]
-/// type lets [`SampleProcessor`]s compose without forcing input and
-/// output to match.
+/// The associated [`Output`] type lets processors compose without forcing
+/// input and output to match.
 ///
 /// # Batch methods
 ///
 /// Two default methods provide batch processing on top of
-/// [`process_sample`]. Both are overridable — concrete kernels that
-/// can do block-rate work (e.g. enum dispatch hoisted out of the inner
-/// loop, SIMD, FFT) should override these directly.
+/// [`process_sample`]. Concrete kernels that can do block-rate work, such
+/// as SIMD or FFT processing, can override them.
 ///
 /// - [`process_into`] takes separate input/output slices.
 /// - [`process_in_place`] mutates a single buffer; available only when
@@ -31,9 +27,8 @@ pub trait SampleProcessor<I>: Reset {
     /// Process exactly one input sample.
     fn process_sample(&mut self, input: I) -> Self::Output;
 
-    /// Convenience batch wrapper: process one slice into another of the
-    /// same length. Default implementation calls [`process_sample`] in a
-    /// tight loop; specialised processors are free to override.
+    /// Process one slice into another of the same length. The default
+    /// implementation calls [`process_sample`] in a loop.
     ///
     /// # Panics
     ///

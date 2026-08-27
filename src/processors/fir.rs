@@ -31,9 +31,7 @@ impl<T: Default + Copy, const N: usize> Default for FirState<T, N> {
 /// Length-`N` FIR filter executing on owned [`FirCoeffs`] and
 /// [`FirState`].
 ///
-/// Direct realisation: each sample multiplies the last `N` inputs by the
-/// `b` taps. For a sparse FIR you might prefer a dedicated kernel; for
-/// most short-to-mid-length filters the direct form is fine.
+/// Each sample is computed from the last `N` inputs and the `b` taps.
 #[derive(Clone, Copy, Debug)]
 pub struct Fir<T, const N: usize> {
     /// Coefficient block.

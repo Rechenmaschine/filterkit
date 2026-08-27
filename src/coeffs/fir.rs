@@ -3,9 +3,7 @@
 /// `N` is the number of taps. The transfer function is
 /// `H(z) = sum_{k=0..N} b[k] * z^(-k)`.
 ///
-/// `FirCoeffs` is purely descriptive — pair it with
-/// [`crate::processors::Fir`] (which owns the runtime state) to actually
-/// filter samples.
+/// Pair `FirCoeffs` with [`crate::processors::Fir`] to filter samples.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FirCoeffs<T, const N: usize> {
     /// Feed-forward taps, indexed from tap 0 (most recent).

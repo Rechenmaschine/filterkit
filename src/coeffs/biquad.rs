@@ -18,7 +18,7 @@ pub struct BiquadCoeffs<T> {
     /// `b[2]` feed-forward.
     pub b2: T,
     /// `a[1]` feed-back (sign as in the difference equation above, *not*
-    /// negated — i.e. the value you'd read from a textbook transfer
+    /// negated; it is the value you'd read from a textbook transfer
     /// function denominator).
     pub a1: T,
     /// `a[2]` feed-back.

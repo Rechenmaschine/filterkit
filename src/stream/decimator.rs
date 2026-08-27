@@ -3,22 +3,17 @@ use crate::traits::{Reset, StreamProcessor, StreamStatus};
 /// Integer-factor decimator with an FIR anti-aliasing prototype.
 ///
 /// Decimates by `M`: produces one output sample for every `M` consumed.
-/// The anti-alias filter is the FIR with taps `taps` (provided by the
-/// caller — typically a lowpass at `fs/(2M)`). The decimator keeps an
-/// internal phase counter so calls don't have to be aligned to `M`.
+/// The anti-alias filter uses the FIR taps in `taps`. The decimator keeps
+/// an internal phase counter so calls do not have to be aligned to `M`.
 ///
 /// # Phase alignment
 ///
 /// The first output is emitted after the `M`-th input is consumed
 /// (i.e. at input index `M - 1`), the next after the `2M`-th, etc.
-/// This is intentional — the FIR needs at least `M` samples to have
-/// "seen" one decimated period — but it differs from a naive
-/// "take every M-th sample starting at 0" reading. Account for the
-/// `M - 1` lead-in if you need sample-accurate alignment between
-/// undecimated and decimated streams.
+/// This differs from taking every `M`-th sample starting at index 0.
+/// Account for the `M - 1` lead-in when aligning the streams.
 ///
-/// Numerically this is just an FIR + downsampler; the structure here
-/// keeps the FIR taps borrowed so the same coefficient table can drive
+/// The FIR taps are borrowed, so a coefficient table can be shared by
 /// multiple decimators.
 #[derive(Debug)]
 pub struct Decimator<'taps, T, const N: usize> {

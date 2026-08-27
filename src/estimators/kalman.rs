@@ -11,9 +11,10 @@ use crate::traits::{Reset, Retune, SampleProcessor};
 ///     z[k] = H x[k]   + v,   v ~ N(0, R)      (measurement)
 /// ```
 ///
-/// This is the estimator analogue of [`crate::coeffs::StateSpace`]: it is
-/// pure parameter data, retunable at runtime via [`Retune`], and paired
-/// with [`KalmanFilter`] to execute.
+/// The model stores parameters, supports [`Retune`], and is used by
+/// [`KalmanFilter`] for estimation.
+///
+/// The equations follow [Kalman's original formulation](https://doi.org/10.1115/1.3662552).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct KalmanModel<T, const N: usize, const M: usize>
 where
@@ -46,9 +47,8 @@ where
 
 /// A Gaussian state estimate: a mean vector and its covariance.
 ///
-/// This is the natural output of a Kalman update — unlike an LTI
-/// processor, the filter reports not just a value but how uncertain it
-/// is about that value.
+/// Output of a Kalman update containing both the state estimate and its
+/// covariance.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GaussianEstimate<T, const N: usize>
 where
@@ -95,8 +95,8 @@ where
     }
 
     /// Build from a model with a zero-mean prior and the given initial
-    /// covariance — usually a large multiple of the identity to signal
-    /// "we don't yet know the state".
+    /// covariance. A large covariance represents greater initial
+    /// uncertainty.
     pub fn with_prior_cov(model: KalmanModel<T, N, M>, cov: SMatrix<T, N, N>) -> Self {
         Self::new(model, SVector::zeros(), cov)
     }

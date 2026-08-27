@@ -2,9 +2,8 @@ use crate::traits::{Reset, SampleProcessor};
 
 /// Series composition: `a -> b`.
 ///
-/// Output of `a` is fed as input to `b`. The two processors may have
-/// different sample types — only `A::Output` and `B`'s input type must
-/// match.
+/// Output of `a` is fed as input to `b`. `A::Output` must match `B`'s
+/// input type.
 #[derive(Clone, Copy, Debug)]
 pub struct Chain<A, B> {
     /// First processor in the chain.

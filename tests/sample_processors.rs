@@ -157,7 +157,7 @@ fn ema_converges_to_dc_input() {
 #[test]
 fn ema_with_state_continues_block() {
     // First block through a fresh filter, then second block through a
-    // filter warm-started with the prior output — output must equal
+    // filter warm-started with the prior output; output must equal
     // running the whole signal through one filter.
     let signal: [f32; 20] = [
         0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.4, -0.3,
