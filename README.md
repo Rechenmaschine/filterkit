@@ -9,9 +9,11 @@ filterkit = "0.1"
 
 ## Who it is for
 
-For Rust applications that process sampled signals and need reusable
-processors with explicit runtime state. `no_std` and no-alloc are supported;
-`alloc` adds dynamic processors.
+For Rust applications that need a practical, general-purpose DSP abstraction.
+Use it when you would otherwise write the filter interface, state handling,
+and composition yourself, or when you want to swap filters without changing
+the rest of the pipeline. It covers common cases rather than targeting peak
+throughput and full customization.
 
 ## Core model
 
@@ -71,9 +73,5 @@ let y = chain.process_sample(0.5);
 
 ## License
 
-Licensed under either of
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
-- MIT license ([LICENSE-MIT](LICENSE-MIT))
-
-at your option.
+Licensed under either the [Apache License, Version 2.0](LICENSE-APACHE) or
+the [MIT license](LICENSE-MIT) at your option.
