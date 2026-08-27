@@ -316,17 +316,18 @@ impl<R: FrequencyResponse> BodePlot<R> {
             "f (Hz)"
         };
 
-        with_render_dispatch!(path, size, |root| draw_bode(
-            root,
-            &title,
+        let plot = BodeRenderData {
+            title: &title,
             x_desc,
             lo,
             hi,
-            &freqs_axis,
-            &mag_db,
-            &phase_deg,
-            group.as_deref(),
-        ))
+            freqs_axis: &freqs_axis,
+            mag_db: &mag_db,
+            phase_deg: &phase_deg,
+            group: group.as_deref(),
+        };
+
+        with_render_dispatch!(path, size, |root| draw_bode(root, &plot))
     }
 
     /// Render the plot to a temp SVG and open it in the system viewer
@@ -336,62 +337,72 @@ impl<R: FrequencyResponse> BodePlot<R> {
     }
 }
 
-fn draw_bode<DB>(
-    root: &DrawingArea<DB, Shift>,
-    title: &str,
-    x_desc: &str,
+struct BodeRenderData<'a> {
+    title: &'a str,
+    x_desc: &'a str,
     lo: f64,
     hi: f64,
-    freqs_axis: &[f64],
-    mag_db: &[f64],
-    phase_deg: &[f64],
-    group: Option<&[f64]>,
+    freqs_axis: &'a [f64],
+    mag_db: &'a [f64],
+    phase_deg: &'a [f64],
+    group: Option<&'a [f64]>,
+}
+
+fn draw_bode<DB>(
+    root: &DrawingArea<DB, Shift>,
+    plot: &BodeRenderData<'_>,
 ) -> Result<(), Box<dyn Error + Send + Sync>>
 where
     DB: DrawingBackend,
     DB::ErrorType: 'static,
 {
-    let panes = if group.is_some() { 3 } else { 2 };
+    let panes = if plot.group.is_some() { 3 } else { 2 };
     let areas = root.split_evenly((panes, 1));
 
     // Magnitude — only this pane carries the overall title.
-    let (mag_lo, mag_hi) = pad_range_min_max(mag_db, 6.0);
+    let (mag_lo, mag_hi) = pad_range_min_max(plot.mag_db, 6.0);
     let mut mag_chart = ChartBuilder::on(&areas[0])
-        .caption(title, ("sans-serif", FONT_TITLE, &TITLE))
+        .caption(plot.title, ("sans-serif", FONT_TITLE, &TITLE))
         .margin(PANE_MARGIN)
         .x_label_area_size(X_LABEL_AREA)
         .y_label_area_size(Y_LABEL_AREA)
-        .build_cartesian_2d((lo..hi).log_scale(), mag_lo..mag_hi)?;
-    configure_styled_mesh(&mut mag_chart, x_desc, "|H| (dB)")?;
+        .build_cartesian_2d((plot.lo..plot.hi).log_scale(), mag_lo..mag_hi)?;
+    configure_styled_mesh(&mut mag_chart, plot.x_desc, "|H| (dB)")?;
     mag_chart.draw_series(LineSeries::new(
-        freqs_axis.iter().copied().zip(mag_db.iter().copied()),
+        plot.freqs_axis
+            .iter()
+            .copied()
+            .zip(plot.mag_db.iter().copied()),
         PRIMARY.stroke_width(LINE_W),
     ))?;
 
     // Phase
-    let (ph_lo, ph_hi) = pad_range_min_max(phase_deg, 15.0);
+    let (ph_lo, ph_hi) = pad_range_min_max(plot.phase_deg, 15.0);
     let mut ph_chart = ChartBuilder::on(&areas[1])
         .margin(PANE_MARGIN)
         .x_label_area_size(X_LABEL_AREA)
         .y_label_area_size(Y_LABEL_AREA)
-        .build_cartesian_2d((lo..hi).log_scale(), ph_lo..ph_hi)?;
-    configure_styled_mesh(&mut ph_chart, x_desc, "phase (deg)")?;
+        .build_cartesian_2d((plot.lo..plot.hi).log_scale(), ph_lo..ph_hi)?;
+    configure_styled_mesh(&mut ph_chart, plot.x_desc, "phase (deg)")?;
     ph_chart.draw_series(LineSeries::new(
-        freqs_axis.iter().copied().zip(phase_deg.iter().copied()),
+        plot.freqs_axis
+            .iter()
+            .copied()
+            .zip(plot.phase_deg.iter().copied()),
         SECONDARY.stroke_width(LINE_W),
     ))?;
 
     // Group delay (optional)
-    if let Some(gd) = group {
+    if let Some(gd) = plot.group {
         let (g_lo, g_hi) = pad_range_min_max(gd, 0.5);
         let mut g_chart = ChartBuilder::on(&areas[2])
             .margin(PANE_MARGIN)
             .x_label_area_size(X_LABEL_AREA)
             .y_label_area_size(Y_LABEL_AREA)
-            .build_cartesian_2d((lo..hi).log_scale(), g_lo..g_hi)?;
-        configure_styled_mesh(&mut g_chart, x_desc, "group delay (samples)")?;
+            .build_cartesian_2d((plot.lo..plot.hi).log_scale(), g_lo..g_hi)?;
+        configure_styled_mesh(&mut g_chart, plot.x_desc, "group delay (samples)")?;
         g_chart.draw_series(LineSeries::new(
-            freqs_axis.iter().copied().zip(gd.iter().copied()),
+            plot.freqs_axis.iter().copied().zip(gd.iter().copied()),
             TERTIARY.stroke_width(LINE_W),
         ))?;
     }
@@ -474,16 +485,17 @@ impl<R: FrequencyResponse> MagnitudePlot<R> {
             "f (Hz)"
         };
 
-        with_render_dispatch!(path, size, |root| draw_magnitude(
-            root,
-            &title,
+        let plot = MagnitudeRenderData {
+            title: &title,
             x_desc,
             lo,
             hi,
             log_x,
-            &freqs_axis,
-            &mag_db,
-        ))
+            freqs_axis: &freqs_axis,
+            mag_db: &mag_db,
+        };
+
+        with_render_dispatch!(path, size, |root| draw_magnitude(root, &plot))
     }
 
     /// Render to a temp SVG and open it in the system viewer.
@@ -492,43 +504,53 @@ impl<R: FrequencyResponse> MagnitudePlot<R> {
     }
 }
 
-fn draw_magnitude<DB>(
-    root: &DrawingArea<DB, Shift>,
-    title: &str,
-    x_desc: &str,
+struct MagnitudeRenderData<'a> {
+    title: &'a str,
+    x_desc: &'a str,
     lo: f64,
     hi: f64,
     log_x: bool,
-    freqs_axis: &[f64],
-    mag_db: &[f64],
+    freqs_axis: &'a [f64],
+    mag_db: &'a [f64],
+}
+
+fn draw_magnitude<DB>(
+    root: &DrawingArea<DB, Shift>,
+    plot: &MagnitudeRenderData<'_>,
 ) -> Result<(), Box<dyn Error + Send + Sync>>
 where
     DB: DrawingBackend,
     DB::ErrorType: 'static,
 {
-    let (y_lo, y_hi) = pad_range_min_max(mag_db, 6.0);
-    if log_x {
+    let (y_lo, y_hi) = pad_range_min_max(plot.mag_db, 6.0);
+    if plot.log_x {
         let mut chart = ChartBuilder::on(root)
-            .caption(title, ("sans-serif", FONT_TITLE, &TITLE))
+            .caption(plot.title, ("sans-serif", FONT_TITLE, &TITLE))
             .margin(PANE_MARGIN)
             .x_label_area_size(X_LABEL_AREA)
             .y_label_area_size(Y_LABEL_AREA)
-            .build_cartesian_2d((lo..hi).log_scale(), y_lo..y_hi)?;
-        configure_styled_mesh(&mut chart, x_desc, "|H| (dB)")?;
+            .build_cartesian_2d((plot.lo..plot.hi).log_scale(), y_lo..y_hi)?;
+        configure_styled_mesh(&mut chart, plot.x_desc, "|H| (dB)")?;
         chart.draw_series(LineSeries::new(
-            freqs_axis.iter().copied().zip(mag_db.iter().copied()),
+            plot.freqs_axis
+                .iter()
+                .copied()
+                .zip(plot.mag_db.iter().copied()),
             PRIMARY.stroke_width(LINE_W),
         ))?;
     } else {
         let mut chart = ChartBuilder::on(root)
-            .caption(title, ("sans-serif", FONT_TITLE, &TITLE))
+            .caption(plot.title, ("sans-serif", FONT_TITLE, &TITLE))
             .margin(PANE_MARGIN)
             .x_label_area_size(X_LABEL_AREA)
             .y_label_area_size(Y_LABEL_AREA)
-            .build_cartesian_2d(lo..hi, y_lo..y_hi)?;
-        configure_styled_mesh(&mut chart, x_desc, "|H| (dB)")?;
+            .build_cartesian_2d(plot.lo..plot.hi, y_lo..y_hi)?;
+        configure_styled_mesh(&mut chart, plot.x_desc, "|H| (dB)")?;
         chart.draw_series(LineSeries::new(
-            freqs_axis.iter().copied().zip(mag_db.iter().copied()),
+            plot.freqs_axis
+                .iter()
+                .copied()
+                .zip(plot.mag_db.iter().copied()),
             PRIMARY.stroke_width(LINE_W),
         ))?;
     }
