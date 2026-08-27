@@ -3,7 +3,7 @@
 //! Composable DSP filters and processors for Rust.
 //!
 //! Filter representations and runtime state are separate. Processing is
-//! grouped into sample, block, stream, whole-signal, and adaptive traits.
+//! grouped into sample, block, whole-signal, and adaptive traits.
 //!
 //! ## API index
 //!
@@ -13,7 +13,6 @@
 //! | [`coeffs`] | `BiquadCoeffs`, `FirCoeffs`, `SosCoeffs`, `StateSpace`, `TransferFunction` |
 //! | [`processors`] | `Biquad`, `Fir`, `Ema`, `FirstOrder`, `DirectFormI`, `Gain`, `Delay`, `SosCascade` |
 //! | [`combinators`] | `Chain`, `Parallel`, `Sum`, `Map`, `Tap`, `Bypass`, `WetDry` |
-//! | [`stream`] | `Decimator`, `Interpolator`, `PolyphaseResampler` |
 //! | [`whole`] | `ForwardBackward`, `PadType` |
 //! | [`adaptive`] | `Lms`, `Nlms` |
 //! | `design` | Biquad, EMA, moving-average, and windowed-sinc specifications |
@@ -35,7 +34,6 @@ pub mod adaptive;
 pub mod coeffs;
 pub mod combinators;
 pub mod processors;
-pub mod stream;
 pub mod traits;
 pub mod whole;
 
@@ -50,7 +48,7 @@ pub mod response;
 
 pub use traits::{
     AdaptiveProcessor, BlockProcessor, Design, Prepare, ProcessSpec, ProcessorExt, Reset, Retune,
-    SampleProcessor, StreamProcessor, StreamStatus, WholeSignalProcessor,
+    SampleProcessor, WholeSignalProcessor,
 };
 
 pub use coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, StateSpace, TransferFunction};

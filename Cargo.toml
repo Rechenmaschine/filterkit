@@ -59,9 +59,5 @@ name = "lms_noise_cancel"
 required-features = ["alloc"]
 
 [[example]]
-name = "polyphase_resample"
-required-features = ["alloc", "design"]
-
-[[example]]
 name = "zero_phase_filtfilt"
 required-features = ["alloc", "design"]

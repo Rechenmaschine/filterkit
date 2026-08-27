@@ -1,20 +1,17 @@
 //! Core processing traits.
 //!
-//! Traits describe processing shapes; numeric bounds remain on concrete
-//! implementations.
+//! Traits define the interfaces used by processors.
 
 mod block;
 mod ext;
 mod prepare;
 mod sample;
-mod stream;
 mod whole;
 
 pub use block::BlockProcessor;
 pub use ext::ProcessorExt;
 pub use prepare::{Prepare, ProcessSpec};
 pub use sample::SampleProcessor;
-pub use stream::{StreamProcessor, StreamStatus};
 pub use whole::{FiltFiltKernel, SteadyState, WholeSignalProcessor};
 
 /// Clear runtime state of a processor *without* changing its coefficients

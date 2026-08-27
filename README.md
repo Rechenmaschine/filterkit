@@ -26,7 +26,6 @@ Several processing traits cover common filter and signal-processing patterns:
 
 - [`SampleProcessor`](src/traits/sample.rs): one input sample produces one output sample.
 - [`BlockProcessor`](src/traits/block.rs): block-based processing.
-- [`StreamProcessor`](src/traits/stream.rs): variable-rate input and output.
 - [`WholeSignalProcessor`](src/traits/whole.rs): processing over a complete finite signal.
 - [`AdaptiveProcessor`](src/traits/mod.rs): processors whose coefficients update from the signal.
 
@@ -38,8 +37,7 @@ Several processing traits cover common filter and signal-processing patterns:
   delay, EMA, and state-space processors.
 - Combinators for chains, parallel branches, sums, mapping, taps, bypass, and
   wet/dry mixing.
-- Decimators, interpolators, polyphase resampling, and forward/backward
-  whole-signal filtering.
+- Forward/backward whole-signal filtering.
 - Design helpers for moving averages, exponential averages, windowed-sinc
   FIRs, and RBJ biquads.
 - Optional LMS/NLMS adaptive filters and a linear Kalman filter.

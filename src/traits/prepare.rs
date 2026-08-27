@@ -1,8 +1,7 @@
-/// Stream parameters announced to a processor before it runs.
+/// Parameters provided to a processor before it runs.
 ///
-/// `ProcessSpec` is single-channel in 0.1. Multi-channel processors are
-/// out of scope for this release. The numeric type `T` is parametric so
-/// fixed-point or integer-rate processors aren't forced into `f64`.
+/// The numeric type `T` is generic so processors can use types other than
+/// `f64`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ProcessSpec<T> {
     /// Audio/data sample rate in Hertz.
