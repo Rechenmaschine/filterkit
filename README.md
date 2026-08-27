@@ -1,45 +1,40 @@
 # filterkit
 
-Composable DSP filters and processors for embedded and desktop Rust.
+A Rust library for composing typed DSP filters and signal processors.
 
 ```toml
 [dependencies]
 filterkit = "0.1"
 ```
 
-## What it is
+## Who it is for
 
-The crate separates filter representations, runtime state, and processing:
+For Rust applications that process sampled signals and need reusable
+processors with explicit runtime state. The crate can be used with a
+`no_std`, no-alloc configuration or with heap-backed processors through the
+`alloc` feature.
 
-- **Representation** describes the system (FIR taps, biquad coefficients,
-  SOS cascades, transfer functions, state-space models).
-- **State** stores the runtime memory, kept *separate* from the
-  representation so coefficient blocks can be `&'static` or shared.
-- **Processor** runs the system against samples.
+## Core model
 
-Processing traits are split by operation shape:
+Filter representations and runtime state are separate. Processing is grouped
+by shape:
 
-| Trait                  | Use for                                                                    |
-| ---------------------- | -------------------------------------------------------------------------- |
-| `SampleProcessor`      | causal same-rate filters (FIR, biquad, SOS, gain, delay, integrators)      |
-| `BlockProcessor`       | block-native algorithms (FFT conv, overlap-add, SIMD batches)              |
-| `StreamProcessor`      | variable-rate ops (decimator, interpolator, polyphase resampler, framers)  |
-| `WholeSignalProcessor` | whole-array, possibly non-causal (filtfilt, batch spectral)                |
-| `AdaptiveProcessor`    | time-varying, signal-driven (LMS, NLMS)                                    |
+- `SampleProcessor`: one input sample produces one output sample.
+- `BlockProcessor`: block-based processing.
+- `StreamProcessor`: variable-rate input and output.
+- `WholeSignalProcessor`: processing over a complete finite signal.
+- `AdaptiveProcessor`: processors whose coefficients update from the signal.
 
-## Features
+Included components cover FIR and IIR filters, filter combinators, decimators
+and resamplers, whole-signal forward/backward filtering, adaptive LMS/NLMS,
+and an optional linear Kalman filter. Design helpers cover moving averages,
+exponential averages, windowed-sinc FIRs, and RBJ biquads.
 
-| Feature   | Default | What you get                                                          |
-| --------- | ------- | --------------------------------------------------------------------- |
-| `std`     | yes     | Standard library; implies `alloc`.                                    |
-| `alloc`   | yes\*   | `Vec`-backed dynamic processors (`FirDyn`, `SosDyn`, resampler, LMS). |
-| `design`  | yes     | Designers: RBJ biquads, windowed-sinc FIR, moving average.            |
-| `kalman`  | no      | State estimators (`KalmanFilter`). Pulls in `nalgebra`.              |
+The `design` feature is enabled by default. `kalman` is opt-in and pulls in
+`nalgebra`; `alloc` enables heap-backed processors. Disable default features
+for the `no_std`, no-alloc configuration.
 
-`*` `alloc` is on by default because `std` implies it. With
-`default-features = false`, the crate uses a `no_std`, no-alloc core.
-
-## Example: design and run a biquad lowpass
+## Quick start
 
 ```rust
 use filterkit::{SampleProcessor, processors::Biquad};
@@ -53,67 +48,32 @@ let mut filter = Biquad::new(coeffs);
 let y = filter.process_sample(1.0_f64);
 ```
 
-## Example: compose filters with combinators
+Processors can be composed with `ProcessorExt`:
 
 ```rust
 use filterkit::{ProcessorExt, SampleProcessor, processors::{Biquad, Gain}};
-use filterkit::design::{BiquadHighpassSpec, BiquadLowpassSpec};
+use filterkit::design::BiquadLowpassSpec;
 
-let hp = Biquad::new(BiquadHighpassSpec { f0: 0.01, q: 0.707 }.design().unwrap());
-let lp = Biquad::new(BiquadLowpassSpec  { f0: 0.10, q: 0.707 }.design().unwrap());
-let mut chain = hp.then(lp).then(Gain::new(0.7_f64));
+let lp = Biquad::new(BiquadLowpassSpec { f0: 0.10, q: 0.707 }.design().unwrap());
+let mut chain = lp.then(Gain::new(0.7_f64));
 
 let y = chain.process_sample(0.5);
 ```
 
-## Worked examples
+## Examples
 
-Each `cargo run --example <name>` is self-contained:
+Run an example with:
 
-- `biquad_lowpass`: single biquad on a sum-of-sines test signal
-- `fir_moving_average`: 5-tap MA, designed and run
-- `ema_smoothing`: EMA, three equivalent parameterisations
-- `combinator_chain`: HP -> LP -> gain, RMS swept across the audio band
-- `lms_noise_cancel`: adaptive cancellation
-- `polyphase_resample`: 48 kHz -> 44.1 kHz with a windowed-sinc prototype
-- `zero_phase_filtfilt`: compare causal and forward/backward output
-- `kalman_tracking`: constant-velocity tracker
-  (needs `--features kalman`)
-
-## Scope of 0.1
-
-What's in:
-- `Reset`, `Prepare`, `Retune`, `Design` traits.
-- All five execution traits + extension methods for `SampleProcessor`.
-- Concrete processors: `Gain`, `Delay`, `Ema`, `FirstOrder`, `Fir`,
-  `Biquad`, `SosCascade`, `DirectFormI`, `StateSpaceProcessor`, plus
-  heap-backed `FirDyn` and `SosDyn`.
-- Stream: const-sized `Decimator`, `Interpolator`, and heap-backed
-  `PolyphaseResampler`.
-- Whole-signal: `ForwardBackward` zero-phase filtering with SciPy-style
-  padding and steady-state pass initialisation.
-- Adaptive: `Lms`, `Nlms`.
-- Estimators (`kalman` feature): linear `KalmanFilter` over an `N`-state,
-  `M`-measurement Gaussian model, returning a `GaussianEstimate`.
-- Design: RBJ biquads (LP/HP/BP/notch), windowed-sinc FIR, moving
-  average, exponential moving average (direct α / time constant /
-  cutoff Hz); plus `magnitude_at` / `phase_at` for verification.
-
-What's deliberately out (planned for ≥0.2):
-- FFT-based block convolution (`BlockProcessor` is currently
-  trait-only).
-- Higher-order filter design (Butterworth, Chebyshev, Elliptic,
-  `tf_to_sos`, `zpk_to_sos`).
-- ZPK representation.
-- Multi-channel processors.
-- Gustafsson initial-condition method for `filtfilt`.
-- RLS adaptive.
-- Estimators: RTS smoother (`WholeSignalProcessor`), extended/unscented
-  Kalman, and a control-input term.
+```text
+cargo run --example biquad_lowpass
+cargo run --example combinator_chain
+cargo run --example zero_phase_filtfilt
+cargo run --example kalman_tracking --features kalman
+```
 
 ## License
 
-Dual-licensed under either of
+Licensed under either of
 
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
 - MIT license ([LICENSE-MIT](LICENSE-MIT))
