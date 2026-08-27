@@ -22,11 +22,11 @@ data be shared while each processor keeps its own delay lines and state.
 
 Processing is grouped by shape:
 
-- `SampleProcessor`: one input sample produces one output sample.
-- `BlockProcessor`: block-based processing.
-- `StreamProcessor`: variable-rate input and output.
-- `WholeSignalProcessor`: processing over a complete finite signal.
-- `AdaptiveProcessor`: processors whose coefficients update from the signal.
+- [`SampleProcessor`](src/traits/sample.rs): one input sample produces one output sample.
+- [`BlockProcessor`](src/traits/block.rs): block-based processing.
+- [`StreamProcessor`](src/traits/stream.rs): variable-rate input and output.
+- [`WholeSignalProcessor`](src/traits/whole.rs): processing over a complete finite signal.
+- [`AdaptiveProcessor`](src/traits/mod.rs): processors whose coefficients update from the signal.
 
 `ProcessorExt` provides composition helpers such as `.then(...)`.
 
