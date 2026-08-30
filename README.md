@@ -1,75 +1,39 @@
 # filterkit
 
-A Rust library for composing typed DSP filters and signal processors.
+`filterkit` is a collection of signal-processing primitives for Rust, including common filters, delays, combinators, and related utilities.
 
-```toml
-[dependencies]
-filterkit = "0.1"
-```
+This crate is aimed at general-purpose use and favors a small, consistent API over specialized implementations for individual domains.
 
-## Who it is for
+`filterkit` is not intended as a high-performance audio DSP library or as a replacement for specialized signal-processing crates. The focus is on common cases that come up in everyday use.
 
-For Rust projects that need a filter, not a DSP framework. It puts common
-filters behind one interface and handles their state and composition, so you
-can swap filters without rewiring the rest of the pipeline. It is a
-general-purpose starting point, not a fully customizable or peak-throughput
-audio library.
-
-## Core model
-
-Design specs produce coefficients or models; processors consume those values
-and maintain their own runtime state. This keeps optional design and analysis
-code separate from the processing core, while allowing prepared filters to be
-reused.
-
-Several processing traits cover common filter and signal-processing patterns:
-
-- [`SampleProcessor`](src/traits/sample.rs): one input sample produces one output sample.
-- [`BlockProcessor`](src/traits/block.rs): block-based processing.
-- [`WholeSignalProcessor`](src/traits/whole.rs): processing over a complete finite signal.
-- [`AdaptiveProcessor`](src/traits/mod.rs): processors whose coefficients update from the signal.
-
-`ProcessorExt` provides composition helpers such as `.then(...)`.
-
-## Included
-
-- FIR and IIR filters, including biquads, SOS cascades, direct forms, gain,
-  delay, EMA, and state-space processors.
-- Combinators for chains, parallel branches, sums, mapping, taps, bypass, and
-  wet/dry mixing.
-- Forward/backward whole-signal filtering.
-- Design helpers for moving averages, exponential averages, windowed-sinc
-  FIRs, and RBJ biquads.
-- Optional LMS/NLMS adaptive filters and a linear Kalman filter.
-
-The `design` feature is enabled by default. `kalman` is opt-in. Disable
-default features for the `no_std`, no-alloc configuration.
+> [!IMPORTANT]
+> The API is still work in progress and may change.
 
 ## Quick start
 
-```rust
-use filterkit::{SampleProcessor, processors::Biquad};
-use filterkit::design::BiquadLowpassSpec;
-
-let coeffs = BiquadLowpassSpec { f0: 2_000.0 / 48_000.0, q: 0.707 }
-    .design()
-    .unwrap();
-let mut filter = Biquad::new(coeffs);
-
-let y = filter.process_sample(1.0_f64);
-```
-
-Composition uses the same sample-processing interface:
+For sample-by-sample processing:
 
 ```rust
-use filterkit::{ProcessorExt, SampleProcessor, processors::{Biquad, Gain}};
-use filterkit::design::BiquadLowpassSpec;
+use filterkit::{processors::{Delay, Ema}, SampleProcessor};
 
-let lowpass = Biquad::new(BiquadLowpassSpec { f0: 0.10, q: 0.707 }.design().unwrap());
-let mut chain = lowpass.then(Gain::new(0.7_f64));
+let mut smoother = Ema::new(0.1_f32);
+let mut delay = Delay::<f32, 4>::new();
 
-let y = chain.process_sample(0.5);
+let sample = 1.0_f32;
+let smoothed = smoother.process_sample(sample);
+let delayed = delay.process_sample(sample);
 ```
+
+## Included
+
+- FIR and IIR filters, biquads, SOS cascades, direct forms, gain, delay, EMA,
+  first-order, and state-space processors.
+- Combinators for combining processors.
+- Design helpers, whole-signal filtering, adaptive filters, and an optional
+  linear Kalman filter.
+- `no_std` and no-alloc configurations.
+
+The `design` feature is enabled by default; `kalman` is opt-in.
 
 ## License
 
