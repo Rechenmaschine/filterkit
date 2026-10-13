@@ -59,6 +59,10 @@ pub use processors::{
 
 pub use combinators::{Bypass, Chain, Map, Parallel, Sum, Tap, WetDry};
 
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct ReadmeDoctests;
+
 #[cfg(feature = "kalman")]
 pub use estimators::{GaussianEstimate, KalmanFilter, KalmanModel};
 

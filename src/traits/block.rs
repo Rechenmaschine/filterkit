@@ -5,7 +5,8 @@ use super::Reset;
 /// `BlockProcessor` handles block-based algorithms such as FFT
 /// convolution, overlap-add, and SIMD batches.
 ///
-/// Output length matches input length.
+/// Output length matches input length. No built-in processor implements
+/// this yet.
 ///
 /// [`SampleProcessor`]: super::SampleProcessor
 pub trait BlockProcessor<I>: Reset {

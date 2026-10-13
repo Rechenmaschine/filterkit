@@ -37,3 +37,14 @@ jobs:
 
       - name: Build documentation
         run: cargo doc --workspace --all-features --no-deps
+
+  msrv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check minimum supported Rust version
+        run: cargo check -p filterkit --lib --all-features
