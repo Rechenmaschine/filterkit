@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::convert::Infallible;
 
 use crate::coeffs::BiquadCoeffs;
 use crate::processors::biquad::BiquadState;
@@ -14,8 +15,7 @@ use crate::traits::{
 /// not const. Requires the `alloc` feature.
 #[derive(Clone, Debug)]
 pub struct SosDyn<T> {
-    /// Active sections.
-    pub sections: Box<[BiquadCoeffs<T>]>,
+    sections: Box<[BiquadCoeffs<T>]>,
     states: Vec<BiquadState<T>>,
 }
 
@@ -31,6 +31,11 @@ where
         }
     }
 
+    /// Active sections.
+    pub fn sections(&self) -> &[BiquadCoeffs<T>] {
+        &self.sections
+    }
+
     /// Number of sections.
     pub fn len(&self) -> usize {
         self.sections.len()
@@ -42,15 +47,11 @@ where
     }
 }
 
-/// Error returned by [`SosDyn::prepare`] when the spec is unworkable.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SosDynPrepareError;
-
 impl<T, S> Prepare<S> for SosDyn<T>
 where
     T: num_traits::Zero + Copy,
 {
-    type Error = SosDynPrepareError;
+    type Error = Infallible;
 
     fn prepare(&mut self, _spec: ProcessSpec<S>) -> Result<(), Self::Error> {
         self.reset();
@@ -73,13 +74,12 @@ impl<T> Retune<Vec<BiquadCoeffs<T>>> for SosDyn<T>
 where
     T: num_traits::Zero + Copy,
 {
-    /// Replace the active sections. Always resets per-section state so
-    /// a retune cannot bleed previous filter history into the new
-    /// cascade.
+    /// Keeps state if the section count is unchanged; otherwise clears it.
     fn retune(&mut self, coeffs: Vec<BiquadCoeffs<T>>) {
-        let new_len = coeffs.len();
+        if coeffs.len() != self.sections.len() {
+            self.states = vec![BiquadState::zero(); coeffs.len()];
+        }
         self.sections = coeffs.into_boxed_slice();
-        self.states = vec![BiquadState::zero(); new_len];
     }
 }
 

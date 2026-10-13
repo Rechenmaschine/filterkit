@@ -48,7 +48,7 @@ pub mod design;
 pub mod response;
 
 pub use traits::{
-    AdaptiveProcessor, BlockProcessor, Design, Prepare, ProcessSpec, ProcessorExt, Reset, Retune,
+    AdaptiveProcessor, BlockProcessor, Prepare, ProcessSpec, ProcessorExt, Reset, Retune,
     SampleProcessor, WholeSignalProcessor,
 };
 
@@ -63,3 +63,7 @@ pub use combinators::{Bypass, Chain, Map, Parallel, Sum, Tap, WetDry};
 
 #[cfg(feature = "kalman")]
 pub use estimators::{GaussianEstimate, KalmanFilter, KalmanModel};
+
+/// The `nalgebra` version used by [`KalmanModel`].
+#[cfg(feature = "kalman")]
+pub use nalgebra;

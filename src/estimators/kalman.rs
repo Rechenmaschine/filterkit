@@ -83,6 +83,8 @@ where
     pub model: KalmanModel<T, N, M>,
     mean: SVector<T, N>,
     cov: SMatrix<T, N, N>,
+    prior_mean: SVector<T, N>,
+    prior_cov: SMatrix<T, N, N>,
 }
 
 impl<T, const N: usize, const M: usize> KalmanFilter<T, N, M>
@@ -91,7 +93,13 @@ where
 {
     /// Build from a model and an explicit prior `(mean, cov)`.
     pub fn new(model: KalmanModel<T, N, M>, mean: SVector<T, N>, cov: SMatrix<T, N, N>) -> Self {
-        Self { model, mean, cov }
+        Self {
+            model,
+            mean,
+            cov,
+            prior_mean: mean,
+            prior_cov: cov,
+        }
     }
 
     /// Build from a model with a zero-mean prior and the given initial
@@ -153,11 +161,10 @@ impl<T, const N: usize, const M: usize> Reset for KalmanFilter<T, N, M>
 where
     T: RealField + Copy,
 {
-    /// Reset the mean to zero. The covariance is left as-is so the filter
-    /// keeps its notion of prior uncertainty; rebuild with
-    /// [`KalmanFilter::with_prior_cov`] to also reset belief.
+    /// Restore the prior `(mean, cov)` the filter was constructed with.
     fn reset(&mut self) {
-        self.mean = SVector::zeros();
+        self.mean = self.prior_mean;
+        self.cov = self.prior_cov;
     }
 }
 
@@ -177,7 +184,8 @@ where
     type Output = GaussianEstimate<T, N>;
 
     /// One predict + update cycle against the measurement `input`,
-    /// returning the posterior estimate.
+    /// returning the posterior estimate. Skips the update if the
+    /// innovation covariance is singular.
     fn process_sample(&mut self, input: SVector<T, M>) -> Self::Output {
         self.predict();
         self.update(input);

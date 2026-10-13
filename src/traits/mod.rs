@@ -34,18 +34,6 @@ pub trait Retune<Coeffs> {
     fn retune(&mut self, coeffs: Coeffs);
 }
 
-/// A high-level specification that produces a coefficient block, model, or
-/// ready-to-run processor.
-pub trait Design {
-    /// What `design` produces (e.g. [`crate::coeffs::FirCoeffs`]).
-    type Output;
-    /// Error type for design failures (e.g. infeasible spec).
-    type Error;
-
-    /// Run the design and produce the output.
-    fn design(&self) -> Result<Self::Output, Self::Error>;
-}
-
 /// A signal-driven, time-varying processor (e.g. LMS, NLMS, RLS).
 ///
 /// Adaptive processors differ from LTI [`SampleProcessor`]s in that

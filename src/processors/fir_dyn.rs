@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::convert::Infallible;
 
 use crate::traits::{
     FiltFiltKernel, Prepare, ProcessSpec, Reset, Retune, SampleProcessor, SteadyState,
@@ -14,15 +15,10 @@ use crate::traits::{
 /// processors. Requires the `alloc` feature.
 #[derive(Clone, Debug)]
 pub struct FirDyn<T> {
-    /// Tap values.
-    pub b: Box<[T]>,
+    b: Box<[T]>,
     buf: Vec<T>,
     head: usize,
 }
-
-/// Error returned by [`FirDyn::prepare`] when the spec is unworkable.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct FirDynPrepareError;
 
 impl<T: Default + Copy> FirDyn<T> {
     /// Build from a slice of taps.
@@ -30,9 +26,14 @@ impl<T: Default + Copy> FirDyn<T> {
         let len = taps.len();
         Self {
             b: taps.to_vec().into_boxed_slice(),
-            buf: vec![T::default(); len.max(1)],
+            buf: vec![T::default(); len],
             head: 0,
         }
+    }
+
+    /// Tap values.
+    pub fn taps(&self) -> &[T] {
+        &self.b
     }
 
     /// Number of taps.
@@ -46,11 +47,10 @@ impl<T: Default + Copy> FirDyn<T> {
     }
 }
 
-impl<T: Default + Copy, S: Copy> Prepare<S> for FirDyn<T> {
-    type Error = FirDynPrepareError;
+impl<T: Default + Copy, S> Prepare<S> for FirDyn<T> {
+    type Error = Infallible;
 
-    fn prepare(&mut self, spec: ProcessSpec<S>) -> Result<(), Self::Error> {
-        let _ = spec;
+    fn prepare(&mut self, _spec: ProcessSpec<S>) -> Result<(), Self::Error> {
         self.reset();
         Ok(())
     }
@@ -66,12 +66,13 @@ impl<T: Default + Copy> Reset for FirDyn<T> {
 }
 
 impl<T: Default + Copy> Retune<Vec<T>> for FirDyn<T> {
-    /// Replace the active taps and clear the delay line.
+    /// Keeps history if the tap count is unchanged; otherwise clears it.
     fn retune(&mut self, coeffs: Vec<T>) {
-        let len = coeffs.len();
+        if coeffs.len() != self.b.len() {
+            self.buf = vec![T::default(); coeffs.len()];
+            self.head = 0;
+        }
         self.b = coeffs.into_boxed_slice();
-        self.buf = vec![T::default(); len.max(1)];
-        self.head = 0;
     }
 }
 

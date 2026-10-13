@@ -50,11 +50,12 @@ impl ExponentialAverageSpec {
         Self::from_alpha(alpha)
     }
 
-    /// From a `-3 dB` cutoff frequency `f_c` (Hz) at the given sample
-    /// rate.
+    /// From an approximate `-3 dB` cutoff frequency `f_c` (Hz) at the
+    /// given sample rate.
     ///
     /// Uses the impulse-invariant mapping
-    /// `α = 1 - e^(-2π f_c / fs)`.
+    /// `α = 1 - e^(-2π f_c / fs)`. Accurate for `f_c ≪ fs`; above about
+    /// `0.28 fs` there is no `-3 dB` point.
     pub fn from_cutoff_hz(
         cutoff_hz: f64,
         sample_rate: f64,

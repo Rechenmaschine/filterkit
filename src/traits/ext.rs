@@ -7,8 +7,8 @@ use crate::combinators::{Bypass, Chain, Map, Parallel, Sum, Tap, WetDry};
 ///
 /// # Example
 ///
-/// ```ignore
-/// use filterkit::{ProcessorExt, Gain};
+/// ```
+/// use filterkit::{Gain, ProcessorExt, SampleProcessor};
 ///
 /// let mut p = Gain::new(0.5_f32)
 ///     .then(Gain::new(2.0)) // identity overall

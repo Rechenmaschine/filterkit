@@ -29,7 +29,7 @@ pub struct BiquadHighpassSpec {
     pub q: f64,
 }
 
-/// Constant-skirt-gain bandpass biquad spec.
+/// Bandpass biquad spec with a constant 0 dB peak gain.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BiquadBandpassSpec {
     /// Normalised centre `f0 / fs`.
@@ -52,28 +52,31 @@ pub struct BiquadNotchSpec {
 pub enum BiquadDesignError {
     /// Normalised frequency outside `(0, 0.5)`.
     InvalidFrequency,
-    /// Q was non-positive.
+    /// Q was non-positive or NaN.
     InvalidQ,
+    /// A designed coefficient could not be converted to the target
+    /// numeric type.
+    NumericConversion,
 }
 
-fn precompute(f0: f64, q: f64) -> Result<(f64, f64, f64), BiquadDesignError> {
+fn precompute(f0: f64, q: f64) -> Result<(f64, f64), BiquadDesignError> {
     if !(f0 > 0.0 && f0 < 0.5) {
         return Err(BiquadDesignError::InvalidFrequency);
     }
-    if q <= 0.0 {
+    if q.is_nan() || q <= 0.0 {
         return Err(BiquadDesignError::InvalidQ);
     }
     let w0 = 2.0 * core::f64::consts::PI * f0;
     let sn = libm::sin(w0);
     let cs = libm::cos(w0);
     let alpha = sn / (2.0 * q);
-    Ok((cs, alpha, sn))
+    Ok((cs, alpha))
 }
 
 impl BiquadLowpassSpec {
     /// Run the design.
     pub fn design(&self) -> Result<BiquadCoeffs<f64>, BiquadDesignError> {
-        let (cs, alpha, _) = precompute(self.f0, self.q)?;
+        let (cs, alpha) = precompute(self.f0, self.q)?;
         let b0 = (1.0 - cs) / 2.0;
         let b1 = 1.0 - cs;
         let b2 = (1.0 - cs) / 2.0;
@@ -87,7 +90,7 @@ impl BiquadLowpassSpec {
 impl BiquadHighpassSpec {
     /// Run the design.
     pub fn design(&self) -> Result<BiquadCoeffs<f64>, BiquadDesignError> {
-        let (cs, alpha, _) = precompute(self.f0, self.q)?;
+        let (cs, alpha) = precompute(self.f0, self.q)?;
         let b0 = (1.0 + cs) / 2.0;
         let b1 = -(1.0 + cs);
         let b2 = (1.0 + cs) / 2.0;
@@ -99,10 +102,9 @@ impl BiquadHighpassSpec {
 }
 
 impl BiquadBandpassSpec {
-    /// Run the design (constant skirt gain, peak = Q).
+    /// Run the design (constant 0 dB peak gain).
     pub fn design(&self) -> Result<BiquadCoeffs<f64>, BiquadDesignError> {
-        let (cs, alpha, sn) = precompute(self.f0, self.q)?;
-        let _ = sn;
+        let (cs, alpha) = precompute(self.f0, self.q)?;
         let b0 = alpha;
         let b1 = 0.0;
         let b2 = -alpha;
@@ -116,7 +118,7 @@ impl BiquadBandpassSpec {
 impl BiquadNotchSpec {
     /// Run the design.
     pub fn design(&self) -> Result<BiquadCoeffs<f64>, BiquadDesignError> {
-        let (cs, alpha, _) = precompute(self.f0, self.q)?;
+        let (cs, alpha) = precompute(self.f0, self.q)?;
         let b0 = 1.0;
         let b1 = -2.0 * cs;
         let b2 = 1.0;
@@ -132,11 +134,11 @@ where
     T: num_traits::FromPrimitive,
 {
     Ok(BiquadCoeffs::new(
-        T::from_f64(c.b0).ok_or(BiquadDesignError::InvalidFrequency)?,
-        T::from_f64(c.b1).ok_or(BiquadDesignError::InvalidFrequency)?,
-        T::from_f64(c.b2).ok_or(BiquadDesignError::InvalidFrequency)?,
-        T::from_f64(c.a1).ok_or(BiquadDesignError::InvalidFrequency)?,
-        T::from_f64(c.a2).ok_or(BiquadDesignError::InvalidFrequency)?,
+        T::from_f64(c.b0).ok_or(BiquadDesignError::NumericConversion)?,
+        T::from_f64(c.b1).ok_or(BiquadDesignError::NumericConversion)?,
+        T::from_f64(c.b2).ok_or(BiquadDesignError::NumericConversion)?,
+        T::from_f64(c.a1).ok_or(BiquadDesignError::NumericConversion)?,
+        T::from_f64(c.a2).ok_or(BiquadDesignError::NumericConversion)?,
     ))
 }
 

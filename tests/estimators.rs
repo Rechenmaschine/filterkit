@@ -78,3 +78,26 @@ fn predict_without_measurement_propagates_state() {
     // Covariance should have grown.
     assert!(est.cov[(0, 0)] > 1.0);
 }
+
+#[test]
+fn kalman_reset_restores_prior() {
+    use filterkit::Reset;
+    use nalgebra::Vector1;
+
+    let model = KalmanModel::new(
+        Matrix1::new(1.0),
+        Matrix1::new(1.0),
+        Matrix1::new(0.01),
+        Matrix1::new(0.1),
+    );
+    let mut kf = KalmanFilter::new(model, Vector1::new(5.0), Matrix1::new(10.0));
+    let prior = kf.estimate();
+
+    for _ in 0..20 {
+        kf.process_sample(Vector1::new(1.0));
+    }
+    assert_ne!(kf.estimate(), prior);
+
+    kf.reset();
+    assert_eq!(kf.estimate(), prior);
+}
