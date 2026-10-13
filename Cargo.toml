@@ -61,9 +61,5 @@ name = "kalman_tracking"
 required-features = ["kalman"]
 
 [[example]]
-name = "lms_noise_cancel"
-required-features = ["alloc"]
-
-[[example]]
 name = "zero_phase_filtfilt"
 required-features = ["alloc", "design"]

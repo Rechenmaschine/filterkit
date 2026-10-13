@@ -29,8 +29,8 @@ let delayed = delay.process_sample(sample);
 - FIR and IIR filters, biquads, SOS cascades, direct forms, gain, delay, EMA,
   first-order, and state-space processors.
 - Combinators for combining processors.
-- Design helpers, whole-signal filtering, adaptive filters, and an optional
-  linear Kalman filter.
+- Design helpers, whole-signal filtering, and an optional linear Kalman
+  filter.
 - `no_std` and no-alloc configurations.
 
 The `design` feature is enabled by default; `kalman` is opt-in.
