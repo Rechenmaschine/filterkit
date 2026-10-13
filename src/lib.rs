@@ -23,6 +23,7 @@
 //! `default-features = false`, the crate uses no heap allocation.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(unsafe_code)]
 #![warn(missing_debug_implementations)]
 #![allow(clippy::needless_range_loop)]

@@ -8,8 +8,14 @@ version = "0.1.0"
 edition = "2021"
 description = "Composable DSP filters and processors for embedded and desktop Rust."
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/Rechenmaschine/filterkit"
 keywords = ["dsp", "filter", "signal-processing", "no-std", "embedded"]
 categories = ["no-std", "science", "embedded"]
+include = ["src/**", "examples/**", "benches/**", "tests/**", "README.md", "LICENSE-*"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = ["std", "design"]

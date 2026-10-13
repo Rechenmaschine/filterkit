@@ -13,8 +13,7 @@ use crate::traits::{Reset, SampleProcessor};
 ///
 /// Implemented for [`TransferFunction`], [`FirCoeffs`], [`BiquadCoeffs`]
 /// and [`SosCoeffs`] for any numeric type that casts to `f64`. Implement
-/// it for custom coefficient types to plug them into the sweep helpers
-/// and `filterkit-plot`.
+/// it for custom coefficient types to plug them into the sweep helpers.
 pub trait FrequencyResponse {
     /// `|H(e^{j 2π f})|`.
     fn magnitude_at(&self, f: f64) -> f64;

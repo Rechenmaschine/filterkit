@@ -37,5 +37,5 @@ The `design` feature is enabled by default; `kalman` is opt-in.
 
 ## License
 
-Licensed under either the [Apache License, Version 2.0](LICENSE-APACHE) or
-the [MIT license](LICENSE-MIT) at your option.
+Licensed under either the [Apache License, Version 2.0](https://github.com/Rechenmaschine/filterkit/blob/main/LICENSE-APACHE) or
+the [MIT license](https://github.com/Rechenmaschine/filterkit/blob/main/LICENSE-MIT) at your option.
