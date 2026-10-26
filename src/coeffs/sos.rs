@@ -16,11 +16,6 @@ impl<T, const N: usize> SosCoeffs<T, N> {
         Self { sections }
     }
 
-    /// Build an SOS cascade from an array of [`BiquadCoeffs`].
-    pub const fn from_biquads(sections: [BiquadCoeffs<T>; N]) -> Self {
-        Self { sections }
-    }
-
     /// Number of sections.
     pub const fn len(&self) -> usize {
         N

@@ -5,16 +5,14 @@ use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState}
 ///
 /// The DF2T topology uses two state values for a second-order section.
 #[derive(Clone, Copy, Debug, Default)]
-pub struct BiquadState<T> {
-    /// `s1` from the DF2T diagram.
-    pub s1: T,
-    /// `s2` from the DF2T diagram.
-    pub s2: T,
+pub(crate) struct BiquadState<T> {
+    pub(crate) s1: T,
+    pub(crate) s2: T,
 }
 
 impl<T: num_traits::Zero> BiquadState<T> {
     /// Zeroed state.
-    pub fn zero() -> Self {
+    pub(crate) fn zero() -> Self {
         Self {
             s1: T::zero(),
             s2: T::zero(),

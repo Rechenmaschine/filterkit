@@ -11,14 +11,26 @@ use filterkit::TransferFunction;
 
 #[test]
 fn windowed_sinc_lowpass() {
-    let c = WindowedSincLowpassSpec {
+    let spec = WindowedSincLowpassSpec {
         cutoff: 0.1,
         window: Window::Blackman,
-    }
-    .design::<63>()
-    .unwrap();
+    };
+    let c = spec.design::<63>().unwrap();
     assert_relative_eq!(c.magnitude_at(0.0), 1.0, epsilon = 1e-9);
     assert!(c.magnitude_at(0.5) < 1e-3);
+
+    let f32_taps = spec.build::<f32, 63>().unwrap().coeffs.b;
+    for (&t32, &t64) in f32_taps.iter().zip(c.b.iter()) {
+        assert_relative_eq!(t32 as f64, t64, epsilon = 1e-7);
+    }
+}
+
+#[test]
+fn first_order_frequency_response() {
+    // y[n] = 0.25 x[n] + 0.25 x[n-1] + 0.5 y[n-1]: DC gain 1, null at Nyquist.
+    let c = filterkit::FirstOrderCoeffs::new(0.25, 0.25, -0.5);
+    assert_relative_eq!(c.magnitude_at(0.0), 1.0, epsilon = 1e-12);
+    assert!(c.magnitude_at(0.5) < 1e-12);
 }
 
 #[test]

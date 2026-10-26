@@ -32,14 +32,24 @@ pub enum WindowedSincError {
     InvalidCutoff,
     /// `N` was zero.
     InvalidLength,
+    /// A tap could not be converted to the target numeric type.
+    NumericConversion,
 }
 
 impl WindowedSincLowpassSpec {
     /// Design and build a [`Fir`](crate::processors::Fir).
-    pub fn build<const N: usize>(
+    pub fn build<T, const N: usize>(
         &self,
-    ) -> Result<crate::processors::Fir<f64, N>, WindowedSincError> {
-        Ok(crate::processors::Fir::new(self.design::<N>()?))
+    ) -> Result<crate::processors::Fir<T, N>, WindowedSincError>
+    where
+        T: Copy + Default + num_traits::FromPrimitive,
+    {
+        let taps = self.design::<N>()?.b;
+        let mut b = [T::default(); N];
+        for (dst, &src) in b.iter_mut().zip(taps.iter()) {
+            *dst = T::from_f64(src).ok_or(WindowedSincError::NumericConversion)?;
+        }
+        Ok(crate::processors::Fir::new(FirCoeffs::new(b)))
     }
 
     /// Design an `N`-tap lowpass FIR with the configured cutoff and

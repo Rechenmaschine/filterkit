@@ -1,20 +1,15 @@
 use crate::coeffs::FirCoeffs;
 use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
-/// Per-instance state for a length-`N` FIR filter.
-///
-/// Holds the last `N` input samples as a circular buffer. Kept separate
-/// from [`FirCoeffs`] so multiple voices can share one coefficient
-/// block.
+/// Circular buffer of the last `N` inputs.
 #[derive(Clone, Copy, Debug)]
-pub struct FirState<T, const N: usize> {
+struct FirState<T, const N: usize> {
     buf: [T; N],
     head: usize,
 }
 
 impl<T: Default + Copy, const N: usize> FirState<T, N> {
-    /// Empty state.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             buf: [T::default(); N],
             head: 0,
@@ -28,8 +23,7 @@ impl<T: Default + Copy, const N: usize> Default for FirState<T, N> {
     }
 }
 
-/// Length-`N` FIR filter executing on owned [`FirCoeffs`] and
-/// [`FirState`].
+/// Length-`N` FIR filter.
 ///
 /// Each sample is computed from the last `N` inputs and the `b` taps.
 #[derive(Clone, Copy, Debug)]

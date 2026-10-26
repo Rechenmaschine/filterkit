@@ -3,10 +3,6 @@ use crate::processors::biquad::BiquadState;
 use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// Cascade of `N` biquads in DF2T.
-///
-/// State is held in `N` [`BiquadState`]s, one per section, so the
-/// coefficient block can be shared while the cascade itself remains
-/// per-instance.
 #[derive(Clone, Copy, Debug)]
 pub struct SosCascade<T, const N: usize> {
     /// Active SOS coefficients.

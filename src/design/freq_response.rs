@@ -3,7 +3,7 @@
 //! Responses are evaluated at normalised frequencies in `[0, 0.5]` and
 //! returned as `f64` values for analysis.
 
-use crate::coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, TransferFunction};
+use crate::coeffs::{BiquadCoeffs, FirCoeffs, FirstOrderCoeffs, SosCoeffs, TransferFunction};
 
 /// Evaluate `(re, im) = sum_k c[k] * e^{-j 2π f k}` for a real
 /// coefficient sequence.
@@ -57,6 +57,21 @@ where
 
     /// `arg(H(e^{j 2π f}))` in radians. Delegates to
     /// [`TransferFunction::phase_at`].
+    pub fn phase_at(&self, f: f64) -> f64 {
+        self.to_transfer_function().phase_at(f)
+    }
+}
+
+impl<T> FirstOrderCoeffs<T>
+where
+    T: Copy + Into<f64>,
+{
+    /// `|H(e^{j 2π f})|`. Delegates to [`TransferFunction::magnitude_at`].
+    pub fn magnitude_at(&self, f: f64) -> f64 {
+        self.to_transfer_function().magnitude_at(f)
+    }
+
+    /// `arg(H(e^{j 2π f}))` in radians.
     pub fn phase_at(&self, f: f64) -> f64 {
         self.to_transfer_function().phase_at(f)
     }

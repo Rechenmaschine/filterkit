@@ -10,7 +10,7 @@
 //! | Module | Main items |
 //! | --- | --- |
 //! | [`traits`] | Processing and lifecycle traits |
-//! | [`coeffs`] | `BiquadCoeffs`, `FirCoeffs`, `SosCoeffs`, `StateSpace`, `TransferFunction` |
+//! | [`coeffs`] | `BiquadCoeffs`, `FirCoeffs`, `FirstOrderCoeffs`, `SosCoeffs`, `StateSpace`, `TransferFunction` |
 //! | [`processors`] | `Biquad`, `Fir`, `Ema`, `FirstOrder`, `DirectFormI`, `Gain`, `Delay`, `SosCascade` |
 //! | [`combinators`] | `Chain`, `Parallel`, `Sum`, `Map`, `Tap`, `Bypass`, `WetDry` |
 //! | [`whole`] | `ForwardBackward`, `PadType` |
@@ -43,11 +43,12 @@ pub mod design;
 
 pub use traits::{ProcessorExt, Reset, Retune, SampleProcessor, WholeSignalProcessor};
 
-pub use coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, StateSpace, TransferFunction};
+pub use coeffs::{
+    BiquadCoeffs, FirCoeffs, FirstOrderCoeffs, SosCoeffs, StateSpace, TransferFunction,
+};
 
 pub use processors::{
-    Biquad, Delay, DirectFormI, Ema, Fir, FirstOrder, FirstOrderCoeffs, Gain, SosCascade,
-    StateSpaceProcessor,
+    Biquad, Delay, DirectFormI, Ema, Fir, FirstOrder, Gain, SosCascade, StateSpaceProcessor,
 };
 
 pub use combinators::{Bypass, Chain, Map, Parallel, Sum, Tap, WetDry};
