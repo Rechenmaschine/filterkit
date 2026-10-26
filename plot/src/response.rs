@@ -3,17 +3,15 @@
 //! Provides frequency sweeps, phase unwrapping, group delay, and
 //! impulse/step responses.
 
-use alloc::vec::Vec;
-
-use crate::coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, TransferFunction};
-use crate::traits::{Reset, SampleProcessor};
+use filterkit::coeffs::{BiquadCoeffs, FirCoeffs, SosCoeffs, TransferFunction};
+use filterkit::traits::{Reset, SampleProcessor};
 
 /// Anything that can be queried for `|H(e^{j 2π f})|` and its phase at a
 /// normalised frequency `f ∈ [0, 0.5]`.
 ///
 /// Implemented for [`TransferFunction`], [`FirCoeffs`], [`BiquadCoeffs`]
 /// and [`SosCoeffs`] for any numeric type that casts to `f64`. Implement
-/// it for custom coefficient types to plug them into the sweep helpers.
+/// it for custom coefficient types to plot them.
 pub trait FrequencyResponse {
     /// `|H(e^{j 2π f})|`.
     fn magnitude_at(&self, f: f64) -> f64;
@@ -85,7 +83,7 @@ impl<R: FrequencyResponse + ?Sized> FrequencyResponse for &R {
 pub fn linspace(start: f64, end: f64, n: usize) -> Vec<f64> {
     match n {
         0 => Vec::new(),
-        1 => alloc::vec![start],
+        1 => vec![start],
         _ => {
             let step = (end - start) / (n - 1) as f64;
             (0..n).map(|i| start + step * i as f64).collect()
@@ -97,11 +95,11 @@ pub fn linspace(start: f64, end: f64, n: usize) -> Vec<f64> {
 /// must be strictly positive.
 pub fn logspace(start: f64, end: f64, n: usize) -> Vec<f64> {
     assert!(start > 0.0 && end > 0.0, "logspace bounds must be positive");
-    let log_start = libm::log10(start);
-    let log_end = libm::log10(end);
+    let log_start = start.log10();
+    let log_end = end.log10();
     linspace(log_start, log_end, n)
         .into_iter()
-        .map(|x| libm::pow(10.0, x))
+        .map(|x| 10f64.powf(x))
         .collect()
 }
 
@@ -114,7 +112,7 @@ pub fn magnitude_sweep<R: FrequencyResponse>(r: &R, freqs: &[f64]) -> Vec<f64> {
 pub fn magnitude_db_sweep<R: FrequencyResponse>(r: &R, freqs: &[f64]) -> Vec<f64> {
     freqs
         .iter()
-        .map(|&f| 20.0 * libm::log10(r.magnitude_at(f)))
+        .map(|&f| 20.0 * r.magnitude_at(f).log10())
         .collect()
 }
 
@@ -159,11 +157,11 @@ pub fn group_delay<R: FrequencyResponse>(r: &R, freqs: &[f64]) -> Vec<f64> {
     use core::f64::consts::PI;
     let phases = phase_unwrapped_sweep(r, freqs);
     let n = freqs.len();
-    let mut out = alloc::vec![0.0; n];
+    let mut out = vec![0.0; n];
     if n < 2 {
         return out;
     }
-    for i in 0..n {
+    for (i, gd) in out.iter_mut().enumerate() {
         let (lo, hi) = if i == 0 {
             (0, 1)
         } else if i == n - 1 {
@@ -173,7 +171,7 @@ pub fn group_delay<R: FrequencyResponse>(r: &R, freqs: &[f64]) -> Vec<f64> {
         };
         let dphi = phases[hi] - phases[lo];
         let domega = 2.0 * PI * (freqs[hi] - freqs[lo]);
-        out[i] = -dphi / domega;
+        *gd = -dphi / domega;
     }
     out
 }
@@ -214,7 +212,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::coeffs::FirCoeffs;
+    use filterkit::coeffs::FirCoeffs;
 
     #[test]
     fn linspace_endpoints() {
@@ -236,7 +234,7 @@ mod tests {
     fn unwrap_phase_handles_pi_jump() {
         use core::f64::consts::PI;
         // synthetic phase that jumps from +π/2 down past -π
-        let mut p = alloc::vec![PI / 2.0, PI - 0.1, -PI + 0.1, -PI / 2.0];
+        let mut p = vec![PI / 2.0, PI - 0.1, -PI + 0.1, -PI / 2.0];
         unwrap_phase(&mut p);
         // No jump greater than π between consecutive samples.
         for w in p.windows(2) {
@@ -246,7 +244,7 @@ mod tests {
 
     #[test]
     fn impulse_response_fir_recovers_taps() {
-        use crate::processors::Fir;
+        use filterkit::processors::Fir;
         let coeffs = FirCoeffs::<f64, 3>::new([0.5, 0.25, 0.125]);
         let mut p: Fir<f64, 3> = Fir::new(coeffs);
         let h = impulse_response(&mut p, 5);
@@ -259,7 +257,7 @@ mod tests {
 
     #[test]
     fn step_response_fir_sums_taps() {
-        use crate::processors::Fir;
+        use filterkit::processors::Fir;
         let coeffs = FirCoeffs::<f64, 3>::new([0.5, 0.25, 0.125]);
         let mut p: Fir<f64, 3> = Fir::new(coeffs);
         let s = step_response(&mut p, 5);

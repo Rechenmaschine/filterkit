@@ -1,11 +1,8 @@
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::convert::Infallible;
 
-use crate::traits::{
-    FiltFiltKernel, Prepare, ProcessSpec, Reset, Retune, SampleProcessor, SteadyState,
-};
+use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// Heap-backed FIR filter of arbitrary length.
 ///
@@ -44,15 +41,6 @@ impl<T: Default + Copy> FirDyn<T> {
     /// `true` when no taps are configured.
     pub fn is_empty(&self) -> bool {
         self.b.is_empty()
-    }
-}
-
-impl<T: Default + Copy, S> Prepare<S> for FirDyn<T> {
-    type Error = Infallible;
-
-    fn prepare(&mut self, _spec: ProcessSpec<S>) -> Result<(), Self::Error> {
-        self.reset();
-        Ok(())
     }
 }
 

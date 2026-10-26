@@ -28,13 +28,15 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use filterkit::response::{
-    self, group_delay, impulse_response, logspace, magnitude_db_sweep, phase_unwrapped_sweep,
-    step_response, FrequencyResponse,
-};
+pub mod response;
+
 use filterkit::traits::{Reset, SampleProcessor};
 use plotters::coord::Shift;
 use plotters::prelude::*;
+use response::{
+    group_delay, impulse_response, logspace, magnitude_db_sweep, phase_unwrapped_sweep,
+    step_response, FrequencyResponse,
+};
 
 const PRIMARY: RGBColor = RGBColor(31, 119, 180);
 const SECONDARY: RGBColor = RGBColor(214, 39, 40);

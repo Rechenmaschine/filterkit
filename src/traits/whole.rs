@@ -2,12 +2,8 @@ use super::{Reset, SampleProcessor};
 
 /// Processors that operate on a whole finite signal at once.
 ///
-/// Unlike [`SampleProcessor`] or [`BlockProcessor`], a
-/// `WholeSignalProcessor` can be non-causal, for example when implementing
-/// zero-phase filtering or centered smoothing.
-///
-/// [`SampleProcessor`]: super::SampleProcessor
-/// [`BlockProcessor`]: super::BlockProcessor
+/// Unlike [`SampleProcessor`], a `WholeSignalProcessor` can be non-causal,
+/// for example when implementing zero-phase filtering or centered smoothing.
 pub trait WholeSignalProcessor<I> {
     /// Sample produced for each input sample.
     type Output;

@@ -2,15 +2,11 @@
 //!
 //! Traits define the interfaces used by processors.
 
-mod block;
 mod ext;
-mod prepare;
 mod sample;
 mod whole;
 
-pub use block::BlockProcessor;
 pub use ext::ProcessorExt;
-pub use prepare::{Prepare, ProcessSpec};
 pub use sample::SampleProcessor;
 pub use whole::{FiltFiltKernel, SteadyState, WholeSignalProcessor};
 

@@ -1,13 +1,10 @@
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::convert::Infallible;
 
 use crate::coeffs::BiquadCoeffs;
 use crate::processors::biquad::BiquadState;
-use crate::traits::{
-    FiltFiltKernel, Prepare, ProcessSpec, Reset, Retune, SampleProcessor, SteadyState,
-};
+use crate::traits::{FiltFiltKernel, Reset, Retune, SampleProcessor, SteadyState};
 
 /// Heap-backed SOS cascade of arbitrary length.
 ///
@@ -44,18 +41,6 @@ where
     /// `true` when no sections are configured.
     pub fn is_empty(&self) -> bool {
         self.sections.is_empty()
-    }
-}
-
-impl<T, S> Prepare<S> for SosDyn<T>
-where
-    T: num_traits::Zero + Copy,
-{
-    type Error = Infallible;
-
-    fn prepare(&mut self, _spec: ProcessSpec<S>) -> Result<(), Self::Error> {
-        self.reset();
-        Ok(())
     }
 }
 
